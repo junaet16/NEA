@@ -1,6 +1,6 @@
 import sqlite3
 
-connection = sqlite3.connect("nea.db")
+connection = sqlite3.connect("../everything_final/nea.db")
 
 cursor = connection.cursor()
 

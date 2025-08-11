@@ -40,6 +40,10 @@ class Station:
         for line in data["lines"]:
             if line["id"] in LINE_NAMES:
                 self.lines.append(line["id"])
+        try:
+            self.zone = data["zone"]
+        except:
+            self.zone = "PLACEHOLDER"
         self.data = data
 
 
@@ -62,6 +66,7 @@ def GetStation(API_KEY, LINE_NAMES):
         data = response.json()
         stations = data["stations"]
         for station in stations:
+            #print(station)
             listOfStations[station["id"]] = Station(station)
 
 
@@ -118,6 +123,8 @@ def makeGraph():
 
 if __name__ == "__main__":
     GetStation(API_KEY, LINE_NAMES)
-    GetLines()
+    for station in listOfStations.values():
+        print(station.name)
+    #GetLines()
     #makeGraph()
     print("end")
