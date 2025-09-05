@@ -236,3 +236,5 @@ if __name__ == "__main__":
     #Save_TfL_Data(stationDictionary, linesDictionary)
     #listOfNeighbours = Make_Graph()
     print("done")
+
+#Change the dijkstra stuff to allow for a variable in the node which will hold the crowding amount which THEN can be used to calculate time
