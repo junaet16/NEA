@@ -24,7 +24,7 @@ def fake_events_and_stadium():
     timeOfEvent TEXT,
     homeTeamID TEXT,
     awayTeamID TEXT,
-    PRIMARY KEY(venueID, dateOfEvent, homeTeamID, awayTeamID)
+    PRIMARY KEY(venueID, dateOfEvent)
     FOREIGN KEY(venueID) REFERENCES venue(nameID)
     )""")
 
