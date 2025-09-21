@@ -3,6 +3,7 @@ import requests
 import math
 import collections
 import heapq
+from classes import *
 
 
 def createDatabase(databaseFile):
@@ -146,20 +147,161 @@ def insertDefault(databaseFile):
     pass
 
 
-def fetchTfLData(databaseFile):
+def fetchStations(TfL_API_KEY, lineIDs):
+    stationDictionary = {}
+    params = {
+        "app_key": TfL_API_KEY,
+    }
+    for line in lineIDs:
+            url = f"https://api.tfl.gov.uk/Line/{line}/Route/Sequence/inbound"
+            response = requests.get(url, params=params)
+            data = response.json()
+            stations = data["stations"]
+            for station in stations:
+                if station["id"] not in stationDictionary:
+                    stationDictionary[station["id"]] = Station(station, lineIDs)
+    return stationDictionary
+
+
+def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
+    linesDictionary = {}
+    weirdStations = {} #Some stations are returned strangely by the API so this is just to handle it
+    params = {
+        "app_key": TfL_API_KEY,
+    }
+    for line in lineIDs:
+        url = f"https://api.tfl.gov.uk/Line/{line}/Route/Sequence/inbound"
+        response = requests.get(url, params=params)
+        data = response.json()
+        branches = data["orderedLineRoutes"]
+        listOflistsOfNAPTAN = []
+        for branchAllData in branches: #branchAllData contains a list of NaPTAN IDs, but also other data which I don't need
+            branch = branchAllData["naptanIds"]
+            for i, id in enumerate(branch):
+                if id not in stationDictionary: #All possible unique stations already exist in stationDictionary, but some stations have other IDs for different modes, which maeans they need to be filtered out so that there is only one ID per station
+                    if id not in weirdStations: #Store of all the stations that have different IDs
+                        newURL = f"https://api.tfl.gov.uk/StopPoint/{id}"
+                        newResponse = requests.get(newURL, params=params)
+                        newData = newResponse.json()
+                        newId = newData["hubNaptanCode"] #Collects the ID that represents the entire station and not just that mode/line
+                        weirdStations[id] = newId
+                    id = weirdStations[id]
+                    branch[i] = id
+            listOflistsOfNAPTAN.append(branch)
+        linesDictionary[line] = listOflistsOfNAPTAN
+    return linesDictionary
+
+
+def fetchTfLData(databaseFile, TfL_API_KEY):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
+
+    #Creates a list of LineIDs
     linesCursorObject = cursor.execute("SELECT LineID FROM Lines")
     lineIDs = []
     for lineTuple in linesCursorObject:
         lineIDs.append(lineTuple[0])
-    print(lineIDs)
+
+    stationDictionary = fetchStations(TfL_API_KEY, lineIDs)
+    linesDictionary = fetch_lines(stationDictionary, TfL_API_KEY, lineIDs)
+
+    connection.close()
+    return stationDictionary, linesDictionary
+
+
+def getStationLineRelationships(databseFile):
+    connection = sqlite3.connect(databseFile)
+    cursor = connection.cursor()
+    megaList = []
+
+    rows = cursor.execute("SELECT StationA, LineID from Connections").fetchall()
+    for row in rows:
+        StationA = row[0]
+        LineID = row[1]
+        cursor.execute("""
+            INSERT OR IGNORE INTO StationLineRelationships (NaPTAN, LineID) 
+            VALUES (?, ?)
+            """, (StationA, LineID))
+
+    connection.commit()
+    connection.close()
+
+
+def SaveTfLData(databaseFile, TfL_API_KEY):
+    stationDictionary, linesDictionary = fetchTfLData(databaseFile, TfL_API_KEY)
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+
+    for station in stationDictionary.values():
+        NaPTAN = station.NaPTAN
+        StationName = station.StationName
+        Latitude = station.Latitude
+        Longitude = station.Longitude
+        TravelZone = station.TravelZone
+        cursor.execute("""
+            INSERT INTO Stations (NaPTAN, StationName, Latitude, Longitude, TravelZone) 
+            VALUES (?, ?, ?, ?, ?)
+            """, (NaPTAN, StationName, Latitude, Longitude, TravelZone))
+
+    for line in linesDictionary.keys():
+        LineID = line
+        branches = linesDictionary[line]
+        for branch in branches:
+            for i in range(len(branch) - 1):
+                try:
+                    StationA = branch[i]
+                    StationB = branch[i + 1]
+
+                    BaseTravelTime = 3 #Calculate Base Travel Time Here Later
+
+                    #So that reverse is possible
+                    cursor.execute("""
+                        INSERT INTO Connections (StationA, StationB, LineID, BaseTravelTime)
+                        VALUES (?, ?, ?, ?)
+                        """, (StationA, StationB, LineID, BaseTravelTime))
+                    cursor.execute("""
+                        INSERT INTO Connections (StationA, StationB, LineID, BaseTravelTime)
+                        VALUES (?, ?, ?, ?)
+                        """, (StationB, StationA, LineID, BaseTravelTime))
+                except:
+                    pass
+
+    getStationLineRelationships(databaseFile)
+
+    connection.commit()
+    connection.close()
+
+
+def MakeGraph(databaseFile):
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+    crowdingNumber = 0
+    crowdingScore = 0
+    listOfNeighbourStations = {} #Just to gather unique [StationA, StationB, LineID]
+    listOfNeighbourData = {} #Actual node to be used
+    rows = cursor.execute("SELECT StationA, StationB, LineID, BaseTravelTime FROM connections").fetchall()
+
+    for StationA, StationB, LineID, BaseTravelTime in rows: #For every unique connection (direction matters)
+        totalTime = BaseTravelTime
+        if StationA not in listOfNeighbourStations:
+            listOfNeighbourStations[StationA] = []
+            listOfNeighbourData[StationA] = []
+        if [StationB, BaseTravelTime, LineID] not in listOfNeighbourStations[StationA]:
+            listOfNeighbourStations[StationA].append([StationB, BaseTravelTime, LineID])
+            listOfNeighbourData[StationA].append([StationB, BaseTravelTime, LineID, crowdingNumber, crowdingScore, totalTime])
+
+    connection.close()
+    return listOfNeighbourData
+
+
+def Dijkstra(mode, listOfNeighbourData, start, goal):
+    pass #Figure this out
 
 
 def main():
+    TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
     databaseFile = "test.db" #Could change name later to something more appropriate
-    insertDefault(databaseFile)
-    fetchTfLData(databaseFile)
+    #SaveTfLData(databaseFile, TfL_API_KEY) Only need to be run once
 
 
 if __name__ == "__main__":
