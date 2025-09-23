@@ -6,6 +6,7 @@ import heapq
 from classes import *
 
 
+#Basically done
 def createDatabase(databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -101,6 +102,7 @@ def createDatabase(databaseFile):
     connection.close()
 
 
+#Need to edit line data
 def createLines(databaseFile):
     #List Format: [Name, Colour, AverageSpeed]
     #For now all the colours will be "DefaultColour" and the AverageSpeeds will be 3
@@ -141,12 +143,14 @@ def createLines(databaseFile):
     connection.close()
 
 
+#Need to add functions for venues and stuff
 def insertDefault(databaseFile):
     #createDatabase(databaseFile) #Only need to run once
     #createLines(databaseFile) #Only need to run once
     pass
 
 
+#Basically done
 def fetchStations(TfL_API_KEY, lineIDs):
     stationDictionary = {}
     params = {
@@ -159,10 +163,11 @@ def fetchStations(TfL_API_KEY, lineIDs):
             stations = data["stations"]
             for station in stations:
                 if station["id"] not in stationDictionary:
-                    stationDictionary[station["id"]] = Station(station, lineIDs)
+                    stationDictionary[station["id"]] = Station(station)
     return stationDictionary
 
 
+#Basically done
 def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
     linesDictionary = {}
     weirdStations = {} #Some stations are returned strangely by the API so this is just to handle it
@@ -192,6 +197,7 @@ def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
     return linesDictionary
 
 
+#Need to add stuff that will prevent it crashing when can't get data
 def fetchTfLData(databaseFile, TfL_API_KEY):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -209,10 +215,10 @@ def fetchTfLData(databaseFile, TfL_API_KEY):
     return stationDictionary, linesDictionary
 
 
+#Basically done
 def getStationLineRelationships(databseFile):
     connection = sqlite3.connect(databseFile)
     cursor = connection.cursor()
-    megaList = []
 
     rows = cursor.execute("SELECT StationA, LineID from Connections").fetchall()
     for row in rows:
@@ -227,6 +233,7 @@ def getStationLineRelationships(databseFile):
     connection.close()
 
 
+#Basically done
 def SaveTfLData(databaseFile, TfL_API_KEY):
     stationDictionary, linesDictionary = fetchTfLData(databaseFile, TfL_API_KEY)
     connection = sqlite3.connect(databaseFile)
@@ -272,6 +279,7 @@ def SaveTfLData(databaseFile, TfL_API_KEY):
     connection.close()
 
 
+#Basically done
 def MakeGraph(databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -285,24 +293,76 @@ def MakeGraph(databaseFile):
         totalTime = BaseTravelTime
         if StationA not in listOfNeighbourStations:
             listOfNeighbourStations[StationA] = []
-            listOfNeighbourData[StationA] = []
         if [StationB, BaseTravelTime, LineID] not in listOfNeighbourStations[StationA]:
             listOfNeighbourStations[StationA].append([StationB, BaseTravelTime, LineID])
-            listOfNeighbourData[StationA].append([StationB, BaseTravelTime, LineID, crowdingNumber, crowdingScore, totalTime])
 
     connection.close()
-    return listOfNeighbourData
+    return listOfNeighbourStations
 
 
-def Dijkstra(mode, listOfNeighbourData, start, goal):
-    pass #Figure this out
+def Dijkstra(graph, startStation, goalStation, CHANGING_TIME, penalty=True):
+    distances = collections.defaultdict(lambda: math.inf) #Best known time to each station
+    cameFrom = {} #To reconstruct path later
+    visited = set() #Stores visited stations
+
+    # Start at the given station, with no line yet chosen
+    startState = (startStation, None)
+    distances[startState] = 0
+
+    frontier = [(0, startState)] #The first item is always the cheapest station to go to next
+    goalState = None #Store the final when we reach the goal
+
+
+    while frontier: #This condition means it runs until all the paths have been explored - till the last one
+        currentCost, (currentStation, currentLine) = heapq.heappop(frontier) #Deletes the next route at the top so that the next one to be explored can be at the top
+
+        # Skip if already fully explored this (station, line) - If at the top of the heap, then it means that it is the shortest ever path to the station
+        if (currentStation, currentLine) in visited:
+            continue
+        visited.add((currentStation, currentLine))
+
+        # Stop if reached the goal station
+        if currentStation == goalStation:
+            goalState = (currentStation, currentLine)
+            break
+
+        # Explore all neighbours of this station
+        for nextStation, baseTravelTime, nextLine in graph[currentStation]:
+            travelTime = baseTravelTime
+
+            if penalty: #Can be turned off if needed
+                if currentLine is not None and currentLine != nextLine:
+                    travelTime += CHANGING_TIME
+
+            # New total time to reach the neighbour
+            newCost = currentCost + travelTime
+            neighbourState = (nextStation, nextLine)
+
+            # Only update if we found a faster way
+            if newCost < distances[neighbourState]:
+                distances[neighbourState] = newCost
+                cameFrom[neighbourState] = (currentStation, currentLine, nextLine)
+                heapq.heappush(frontier, (newCost, neighbourState))
+
+    # Start from the goal and trace back to the start
+    pathSteps = []
+    currentState = goalState
+
+    while currentState != startState:
+        prevStation, prevLine, lineUsed = cameFrom[currentState]
+        currStation, currLine = currentState
+        pathSteps.append((prevStation, currStation, lineUsed, distances[(currStation, currLine)]))
+        currentState = (prevStation, prevLine)
+
+
+    pathSteps.reverse()
+    return pathSteps
 
 
 def main():
     TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
     databaseFile = "test.db" #Could change name later to something more appropriate
     #SaveTfLData(databaseFile, TfL_API_KEY) Only need to be run once
-
 
 if __name__ == "__main__":
     main()
