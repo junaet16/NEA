@@ -1,95 +1,78 @@
 import sqlite3
-
-
-
-
-#I realised I need to fundamentally change the Dijkstra's and making graph functions soooooooooooooooooo thats the task for at home :sob
-
-
-
-def fake_events_and_stadium():
-    connection = sqlite3.connect('nea.db')
-    cursor = connection.cursor()
-    #Use JSON instead of a list of stuff?
-    #Create tables
-
-    kill = ["DROP TABLE IF EXISTS venues", "DROP TABLE IF EXISTS events"]
-
-    for thingToKill in kill:
-        cursor.execute(thingToKill)
-
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS venues (
-        nameID TEXT PRIMARY KEY,
-        venueName TEXT,
-        teamID TEXT,
-        capacity INTEGER,
-        stationsNearby TEXT,
-        coordinates TEXT)
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS events (
-    venueID TEXT,
-    eventName TEXT,
-    dateOfEvent TEXT,
-    timeOfEvent TEXT,
-    homeTeamID TEXT,
-    awayTeamID TEXT,
-    PRIMARY KEY(venueID, dateOfEvent)
-    FOREIGN KEY(venueID) REFERENCES venues(nameID)
-    )""")
-#Test
-
-    venuesList = [
-        ("Emirates", "Emirates Stadium", "ARS", 60704, "940GZZLUASL", "N/A")
-    ]
-
-    cursor.executemany("""
-    INSERT INTO venues (nameID, venueName, teamID, capacity, stationsNearby, coordinates)
-    VALUES (?, ?, ?, ?, ?, ?)""", venuesList)
-
-    eventsList = [
-        ("Emirates", "Example", "23/12/2025", "13:00", "ARS", "TOT")
-    ]
-
-    cursor.executemany("""
-    INSERT INTO events (venueID, eventName, dateOfEvent, timeOfEvent, homeTeamID, awayTeamID)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, eventsList)
-
-    connection.commit()
-    connection.close()
-
-
+from test_big import MakeGraph, Dijkstra
+import datetime
 
 def takeInput():
-    #For now it will just return a default value for testing purposes?
-    if input("Use custom? y/n: ") == "y":
-        pass #late
-    else:
-        start = "940GZZLULYS"
-        end = "940GZZLUBOS"
-        date = "23/12/2025"
-        starTime = "14:00"
+    #For testing purposes this will now be a default value
+    date = "12/12/2026"
+    journeyStart = "13:00"
+    startStation = "940GZZLULYS"
+    endStation = "HUBSRA"
+
+    data = {
+        "date": date,
+        "journeyStart": journeyStart,
+        "startStation": startStation,
+        "endStation": endStation
+    }
+
+    return data
 
 
-def calculateMidJourney(unprocessedInput):
+def calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME):
+    journeyStart = baseInputData["journeyStart"]
+    startStation = baseInputData["startStation"]
+    endStation = baseInputData["endStation"]
+
+    graph = MakeGraph(databaseFile)
+    steps = Dijkstra(graph, startStation, endStation, CHANGING_TIME)
+    totalMinutes = steps[-1][3]
+    halfMinutes = totalMinutes // 2
+
+    timeObject = datetime.datetime.strptime(journeyStart, "%H:%M")
+    timeDelta = datetime.timedelta(minutes=halfMinutes)
+    timeObject += timeDelta
+
+    return timeObject
+
+
+def findEventsInTimeFrame(midjourneyTime, databaseFile, baseInputData, MAX_TIME_WINDOW):
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+    date = baseInputData["date"]
+    importantEvents = {} #(venue, date) : minuteDifference
+
+    eventsInDay = cursor.execute("""
+        SELECT *
+        FROM Events
+        WHERE Date = ?
+        """, (date,)).fetchall()
+
+    for event in eventsInDay:
+        eventTime = datetime.datetime.strptime(event[2], "%H:%M")
+        timeDifference = abs(eventTime - midjourneyTime)
+        minutesDifference = timeDifference.total_seconds() // 60
+        if minutesDifference <= MAX_TIME_WINDOW:
+            venue = event[0]
+            importantEvents[(venue, date)] = minutesDifference
+
+    connection.close()
+    return importantEvents
+
+
+def findBaseNumberOfPeople():
     pass
 
 
-
-
-
-
-
-
-
 def main():
-    fake_events_and_stadium()
-    unprocessedInput = takeInput()
-    finalInput = calculateMidJourney(unprocessedInput)
+    databaseFile = "test.db"
+    CHANGING_TIME = 3
+    MAX_TIME_WINDOW = 120
+    baseInputData = takeInput()
+    midTimeObject = calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME)
+    events = findEventsInTimeFrame(midTimeObject, databaseFile, baseInputData, MAX_TIME_WINDOW)
+    print(events)
+
 
 if __name__ == '__main__':
     main()
