@@ -22,3 +22,4 @@ class Line:
 class DijkstraStation(Station):
     def __init__(self, data):
         super().__init__(data)
+        self.listOfEvents = []

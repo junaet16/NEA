@@ -21,13 +21,13 @@ def fakeEvents(database):
     connection = sqlite3.connect(database)
     cursor = connection.cursor()
     eventsList = [
-        ("Emirates Stadium", "12/12/2026", "14:00", "Arsenal", "Tottenham", "N/A")
+        ("Emirates Stadium", "12/12/2026", "14:00", "Arsenal", "Tottenham", "N/A", 120)
     ]
 
     for event in eventsList:
         cursor.execute("""
-            INSERT INTO Events (VenueName, Date, Time, HomeTeam, AwayTeam, EventName)
-            Values (?, ?, ?, ?, ?, ?)""", event)
+            INSERT INTO Events (VenueName, Date, Time, HomeTeam, AwayTeam, EventName, Duration)
+            Values (?, ?, ?, ?, ?, ?, ?)""", event)
 
     connection.commit()
     connection.close()

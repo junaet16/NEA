@@ -6,7 +6,7 @@ import heapq
 from classes import *
 
 
-#Basically done
+#Need to add a table and then create a function for terminus stations
 def createDatabase(databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -69,6 +69,7 @@ def createDatabase(databaseFile):
             HomeTeam TEXT,
             AwayTeam TEXT,
             EventName TEXT,
+            Duration INTEGER,
             PRIMARY KEY (VenueName, Date),
             FOREIGN KEY (VenueName) REFERENCES Venues(VenueName)
         );
@@ -102,7 +103,6 @@ def createDatabase(databaseFile):
     connection.close()
 
 
-#Need to edit line data
 def createLines(databaseFile):
     #List Format: [Name, Colour, AverageSpeed]
     #For now all the colours will be "DefaultColour" and the AverageSpeeds will be 3
@@ -143,14 +143,12 @@ def createLines(databaseFile):
     connection.close()
 
 
-#Need to add functions for venues and stuff
 def insertDefault(databaseFile):
     #createDatabase(databaseFile) #Only need to run once
     #createLines(databaseFile) #Only need to run once
     pass
 
 
-#Basically done
 def fetchStations(TfL_API_KEY, lineIDs):
     stationDictionary = {}
     params = {
@@ -167,7 +165,6 @@ def fetchStations(TfL_API_KEY, lineIDs):
     return stationDictionary
 
 
-#Basically done
 def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
     linesDictionary = {}
     weirdStations = {} #Some stations are returned strangely by the API so this is just to handle it
@@ -215,7 +212,6 @@ def fetchTfLData(databaseFile, TfL_API_KEY):
     return stationDictionary, linesDictionary
 
 
-#Basically done
 def getStationLineRelationships(databseFile):
     connection = sqlite3.connect(databseFile)
     cursor = connection.cursor()
@@ -233,7 +229,6 @@ def getStationLineRelationships(databseFile):
     connection.close()
 
 
-#Basically done
 def SaveTfLData(databaseFile, TfL_API_KEY):
     stationDictionary, linesDictionary = fetchTfLData(databaseFile, TfL_API_KEY)
     connection = sqlite3.connect(databaseFile)
@@ -279,7 +274,6 @@ def SaveTfLData(databaseFile, TfL_API_KEY):
     connection.close()
 
 
-#Basically done
 def MakeGraph(databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
