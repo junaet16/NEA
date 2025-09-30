@@ -15,6 +15,7 @@ class Station:
 
 
 #Class to create a Line
+#Would serve as more of a parent class than anything
 class Line:
     def __init__(self, LineID, LineName, LineColour, AverageSpeed):
         self.LineID = LineID
