@@ -98,11 +98,11 @@ def createDatabase(databaseFile):
 
     """)
 
-
     connection.commit()
     connection.close()
 
 
+#Puts all the data regarding each line into the database
 def createLines(databaseFile):
     #List Format: [Name, Colour, AverageSpeed]
     #For now all the colours will be "DefaultColour" and the AverageSpeeds will be 3
@@ -143,12 +143,14 @@ def createLines(databaseFile):
     connection.close()
 
 
+#Puts all the 'hard-coded' data and parameters into the database
 def insertDefault(databaseFile):
-    #createDatabase(databaseFile) #Only need to run once
-    #createLines(databaseFile) #Only need to run once
+    createDatabase(databaseFile) #Only need to run once
+    createLines(databaseFile) #Only need to run once
     pass
 
 
+#Creates a dictionary with the format - {NaPTAN : Station object}
 def fetchStations(TfL_API_KEY, lineIDs):
     stationDictionary = {}
     params = {
@@ -160,17 +162,19 @@ def fetchStations(TfL_API_KEY, lineIDs):
             data = response.json()
             stations = data["stations"]
             for station in stations:
-                if station["id"] not in stationDictionary:
+                if station["id"] not in stationDictionary: #So every entry is unique
                     stationDictionary[station["id"]] = Station(station)
     return stationDictionary
 
 
+#Uses a list of LineIDs and a list of Station objects to create a dictionary in the form {LineID : [[Branch1], [Branch2], ..., [Branchn]]
 def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
-    linesDictionary = {}
+    linesDictionary = {} #Final dictionary that will be returned
     weirdStations = {} #Some stations are returned strangely by the API so this is just to handle it
     params = {
         "app_key": TfL_API_KEY,
     }
+    
     for line in lineIDs:
         url = f"https://api.tfl.gov.uk/Line/{line}/Route/Sequence/inbound"
         response = requests.get(url, params=params)
