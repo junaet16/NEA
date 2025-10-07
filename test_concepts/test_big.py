@@ -170,7 +170,7 @@ def fetchStations(TfL_API_KEY, lineIDs):
 #Uses a list of LineIDs and a list of Station objects to create a dictionary in the form {LineID : [[Branch1], [Branch2], ..., [Branchn]]
 def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
     linesDictionary = {} #Final dictionary that will be returned
-    weirdStations = {} #Some stations are returned strangely by the API so this is just to handle it
+    weirdStations = {} #Some stations are returned strangely by the API so this is just to handle it - some stations have different IDs for different branches and therefore don't align with their IDs in the database, so this dictionary will be in the form - {notCorrectID : correctID}
     params = {
         "app_key": TfL_API_KEY,
     }
@@ -182,17 +182,17 @@ def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
         branches = data["orderedLineRoutes"]
         listOflistsOfNAPTAN = []
         for branchAllData in branches: #branchAllData contains a list of NaPTAN IDs, but also other data which I don't need
-            branch = branchAllData["naptanIds"]
+            branch = branchAllData["naptanIds"] #List of all stations (NaPTAN IDs) of the branch
             for i, id in enumerate(branch):
                 if id not in stationDictionary: #All possible unique stations already exist in stationDictionary, but some stations have other IDs for different modes, which maeans they need to be filtered out so that there is only one ID per station
                     if id not in weirdStations: #Store of all the stations that have different IDs
-                        newURL = f"https://api.tfl.gov.uk/StopPoint/{id}"
+                        newURL = f"https://api.tfl.gov.uk/StopPoint/{id}" #Fetches all data regarding that particular station
                         newResponse = requests.get(newURL, params=params)
                         newData = newResponse.json()
                         newId = newData["hubNaptanCode"] #Collects the ID that represents the entire station and not just that mode/line
                         weirdStations[id] = newId
                     id = weirdStations[id]
-                    branch[i] = id
+                    branch[i] = id #Changes the ID of the station in the branch to the correct ID
             listOflistsOfNAPTAN.append(branch)
         linesDictionary[line] = listOflistsOfNAPTAN
     return linesDictionary
@@ -206,7 +206,7 @@ def fetchTfLData(databaseFile, TfL_API_KEY):
     #Creates a list of LineIDs
     linesCursorObject = cursor.execute("SELECT LineID FROM Lines")
     lineIDs = []
-    for lineTuple in linesCursorObject:
+    for lineTuple in linesCursorObject: #Because the SQL reutrns the data in the form (LineID,)
         lineIDs.append(lineTuple[0])
 
     stationDictionary = fetchStations(TfL_API_KEY, lineIDs)
@@ -216,6 +216,7 @@ def fetchTfLData(databaseFile, TfL_API_KEY):
     return stationDictionary, linesDictionary
 
 
+#Puts every possible Station, Line pair and puts it into the database
 def getStationLineRelationships(databseFile):
     connection = sqlite3.connect(databseFile)
     cursor = connection.cursor()
@@ -224,6 +225,7 @@ def getStationLineRelationships(databseFile):
     for row in rows:
         StationA = row[0]
         LineID = row[1]
+        #Ignore as well because station might have more than 1 connection to another station via the same line
         cursor.execute("""
             INSERT OR IGNORE INTO StationLineRelationships (NaPTAN, LineID) 
             VALUES (?, ?)
