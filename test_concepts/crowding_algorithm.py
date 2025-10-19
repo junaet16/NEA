@@ -21,6 +21,7 @@ def takeInput():
     return data
 
 
+#Returns the approximate time of the middle of the journey (without consideration of delays and things)
 def calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME):
     journeyStart = baseInputData["journeyStart"]
     startStation = baseInputData["startStation"]
@@ -28,7 +29,8 @@ def calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME):
 
     graph = MakeGraph(databaseFile)
     steps = Dijkstra(graph, startStation, endStation, CHANGING_TIME)
-    totalMinutes = steps[-1][3]
+    print(steps)
+    totalMinutes = steps[-1][3] #steps is in the form [[PreviousStationNaPTAN, NextStationNaPTAN, lineID, LengthOfTimeToPoint],...]
     halfMinutes = totalMinutes // 2
 
     timeObject = datetime.datetime.strptime(journeyStart, "%H:%M")
@@ -38,29 +40,35 @@ def calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME):
     return timeObject
 
 
-def findEventsInTimeFrame(midjourneyTime, databaseFile, baseInputData, MAX_TIME_WINDOW):
+#As the name suggests, it returns the list of events in the timeframe in which an event might impact the journey - I might change the format of the returned data later
+def findEventsInTimeFrame(midjourneyTime, databaseFile, baseInputData, MAX_TIME_WINDOW, arrivalPeakOffset, departurePeakOffset):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
     date = baseInputData["date"]
-    importantEvents = {} #(venue, date) : minuteDifference
+    importantEvents = {} #(venue, date) : minuteDifference  - The events which might affect the journey
 
+    #Fetches all the events in that day
     eventsInDay = cursor.execute("""
         SELECT *
         FROM Events
         WHERE Date = ?
         """, (date,)).fetchall()
 
+    #Event is in the form [VenueName, Date, Time, HomeTeam, AwayTeam, EventName, Duration]
     for event in eventsInDay:
         duration = event[6]
         eventTime = datetime.datetime.strptime(event[2], "%H:%M")
         endTime = eventTime + datetime.timedelta(minutes=duration)
-        startTimeDifference = abs(eventTime - midjourneyTime)
-        endTimeDifference = abs(endTime - midjourneyTime) #I'll do the offset stuff here
+
+        startTimeDifference = abs(eventTime - arrivalPeakOffset - midjourneyTime) #Peaks are unlikely to be immediately at the start or end of an event
+        endTimeDifference = abs((endTime + departurePeakOffset) - midjourneyTime)
+
         if startTimeDifference > endTimeDifference:
             timeDifference = endTimeDifference
         else:
             timeDifference = startTimeDifference
         minutesDifference = timeDifference.total_seconds() // 60
+
         if minutesDifference <= MAX_TIME_WINDOW:
             venue = event[0]
             startDifferenceMinutes = startTimeDifference.total_seconds() // 60
@@ -71,9 +79,11 @@ def findEventsInTimeFrame(midjourneyTime, databaseFile, baseInputData, MAX_TIME_
     return importantEvents
 
 
+#This function assigns each station a weight so that the number of people at the stations will be more accurately assigned
 #stationDistances dictionary format - {NaPTAN: distance}
+#Returns dictionary format - {NaPTAN: proportion}
 def inverseWeight(stationDistances):
-    extra = 0 #Avoid divide by zero errors - for testing purposes I'll ignore it and put 0
+    extra = 1 #Avoid divide by zero errors - if the distance between the station and the venue is 0
     weights = {}
     proportions = {}
     totalWeight = 0
@@ -96,20 +106,55 @@ def returnStationsWithDistances():
     return stationsWithDistances
 
 
-#Unfinished
+#Returns the proportion of the peak expected number of people at a station at the given time
+def gausianFactorAtPeak(relativePeak, sigma, relativeTimeDifference):
+    x = (relativePeak - relativeTimeDifference) / sigma
+    returnFactor = math.exp(-0.5 * x * x)
+    return returnFactor
+
+
+#For each event, finds the base number of people at the nearby stations
 def findBaseNumberOfPeople(
         capacity,
-        ATTENDANCE,
-        TRAIN_PROPORTION,
-        statonsWithDistances,
+        ATTENDANCE, #The proportion of seats that will actually be filled
+        TRAIN_PROPORTION, #The proportion of people using TfL rail
+        startDifferenceMinutes, #minutes from journey midpoint to event start
+        endDifferenceMinutes, #minutes from journey midpoint to event end
+        arrivalWindowMinutes, #Length of time of arrival window where the journey may be affected
+        departureWindowMinutes, #Length of time of departure window where the journey may be affected
+        arrivalPeakOffset, #Offset because peaks are usually not at exactly the start or end
+        departurePeakOffset,
+        statonsWithDistances, #Dictionary of stations with the values being the distance between the station and the station and the venue
         MAX_TIME_WINDOW,
-        SIGMA_FACTOR
+        SIGMA_FACTOR,
 ):
-    totalAttendance = capacity * ATTENDANCE
-    tflUsageTotal = totalAttendance * TRAIN_PROPORTION
-    peakProportion = tflUsageTotal / capacity
+
+    totalAttendance = capacity * ATTENDANCE #Gets the expected attendance at the venue
+    tflUsageTotal = totalAttendance * TRAIN_PROPORTION #Gets the expected total usage of TfL rail
+
     proportions = inverseWeight(statonsWithDistances)
-    calculationSIGMA = max(1, MAX_TIME_WINDOW / SIGMA_FACTOR) #max used to make sure sigma is at least bigger or equal to 1
+    StationsWithPeopleAtPeak = {}
+    for stationID in proportions.keys():
+        StationsWithPeopleAtPeak[stationID] = proportions[stationID] * tflUsageTotal
+
+    relativeArrivalPeakTime = startDifferenceMinutes - arrivalPeakOffset
+    relativeDepartPeakTime = endDifferenceMinutes + departurePeakOffset
+
+    sigmaArrival = max(1, arrivalWindowMinutes / SIGMA_FACTOR) #max used to make sure sigma is at least bigger or equal to 1
+    sigmaDeparture = max(1, departureWindowMinutes / SIGMA_FACTOR)
+
+    #Realistically there isn't going to be a difference between arrival and departure rates because if you came by train, you will probably leave by train so will not affect, and vice versa, so the factors will be set to one
+
+    arrivalsFactorAtMid = gausianFactorAtPeak(relativeArrivalPeakTime, sigmaArrival, 0)
+    depratureFactorAtMid = gausianFactorAtPeak(relativeDepartPeakTime, sigmaDeparture, 0)
+
+    stationsAtMid = {} #Format - {NaPTAN: ArrivalNumbers, DepartureNumbers}
+    for stationID in StationsWithPeopleAtPeak.keys():
+        arrivalPeople = StationsWithPeopleAtPeak[stationID] * arrivalsFactorAtMid
+        departurePeople = StationsWithPeopleAtPeak[stationID] * depratureFactorAtMid
+        stationsAtMid[stationID] = [arrivalPeople, departurePeople]
+
+    return stationsAtMid
 
 
 
