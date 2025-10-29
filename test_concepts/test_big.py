@@ -3,7 +3,7 @@ import requests
 import math
 import collections
 import heapq
-from classes import *
+import classes
 
 
 #Need to add a table and then create a function for terminus stations
@@ -102,6 +102,7 @@ def createDatabase(databaseFile):
     connection.close()
 
 
+#Might organise all this data into a JSON file later
 #Puts all the data regarding each line into the database
 def createLines(databaseFile):
     #List Format: [Name, Colour, AverageSpeed]
@@ -156,6 +157,7 @@ def fetchStations(TfL_API_KEY, lineIDs):
     params = {
         "app_key": TfL_API_KEY,
     }
+
     for line in lineIDs:
             url = f"https://api.tfl.gov.uk/Line/{line}/Route/Sequence/inbound"
             response = requests.get(url, params=params)
@@ -163,7 +165,17 @@ def fetchStations(TfL_API_KEY, lineIDs):
             stations = data["stations"]
             for station in stations:
                 if station["id"] not in stationDictionary: #So every entry is unique
-                    stationDictionary[station["id"]] = Station(station)
+                    NaPTAN = data['id']
+                    StationName = data['name']
+                    Latitude = data['lat']
+                    Longitude = data['lon']
+                    TravelZone = "PLACEHOLDER"
+                    try:
+                        zone = data["zone"]
+                    except:
+                        zone = "PLACEHOLDER"  # I'll probably need to make another table of exceptions because TfL is annoying and I need to manually write the zones in a database
+                    stationDictionary[station["id"]] = classes.Station(NaPTAN, StationName, Latitude, Longitude, TravelZone)
+
     return stationDictionary
 
 
@@ -362,7 +374,7 @@ def Dijkstra(graph, startStation, goalStation, CHANGING_TIME, penalty=True):
 def main():
     TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
     databaseFile = "test.db" #Could change name later to something more appropriate
-    #SaveTfLData(databaseFile, TfL_API_KEY) Only need to be run once
+    print(MakeGraph(databaseFile))
 
 if __name__ == "__main__":
     main()
