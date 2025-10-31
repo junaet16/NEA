@@ -96,6 +96,7 @@ class AffectedConnection(Connection):
     def IsAffected(self):
         return True
 
+    #Polymorphism?????
     def returnDelay(self):
         averageDelayFactor = (self.StationADelayFactor + self.StationBDelayFactor) / 2
         self.DelayFactor = averageDelayFactor
