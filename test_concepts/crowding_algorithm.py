@@ -172,6 +172,7 @@ def findCapacity(databaseFile, VenueName):
     return venue.Capacity
 
 
+#Recursion???????
 def propegation(graph, stationID, people, MINIMUM_PEOPLE, network, event, PROPEGATION_FACTOR):
     stationObject = network.nodes[stationID]
     if stationObject.IsAffected() == False:
