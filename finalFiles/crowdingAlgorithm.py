@@ -169,20 +169,24 @@ def findCapacity(databaseFile, VenueName):
 
 #Recursion???????
 def propegation(graph, stationID, people, MINIMUM_PEOPLE, network, event, PROPEGATION_FACTOR):
-    stationObject = network.nodes[stationID]
+    stationObject = network.nodes[stationID] #Fetches the Dijkstra station object stored in the network 
     if stationObject.IsAffected() == False:
         NaPTAN = stationID
         StationName = stationObject.StationName
-        newStationObject = classes.AffectedDijkstraStation(NaPTAN, StationName)
-        newStationObject.events[event] = people
+        #Above lines fetch the information stored in the old object
+        newStationObject = classes.AffectedDijkstraStation(NaPTAN, StationName) #Creates a new affected object
+        newStationObject.events[event] = people #Adds the number of people at this station because of this event
         stationObject = newStationObject
-        network.nodes[stationID] = stationObject
-    oldPeople = stationObject.events[event]
+        network.nodes[stationID] = stationObject #Replaces old object
+    try:
+        oldPeople = stationObject.events[event] #This will work If and only if the station was already affected by this event
+    except:
+        oldPeople = 0 #This will run if the station has been already affected but not by this event so the event can't be found in the object, so the old population will be set as 0
     if oldPeople > people:
-        pass
+        pass #No need to update because a larger wave of people have passed through already. Propegration will not be needed because a larger wave existed which has been propegated already
     else:
         stationObject.events[event] = people
-        network.nodes[stationID] = stationObject
+        network.nodes[stationID] = stationObject #Updates the people at this station due to this event at this station
         newPeople = people * PROPEGATION_FACTOR
         if newPeople < MINIMUM_PEOPLE:
             pass
@@ -193,6 +197,7 @@ def propegation(graph, stationID, people, MINIMUM_PEOPLE, network, event, PROPEG
                 propegation(graph, newStationID, newPeople, MINIMUM_PEOPLE, network, event, PROPEGATION_FACTOR)
 
 
+#Creates a parameter object to store the parameters used for calculation
 def getParameters(username, databaseFile):
     #Real one will get from database
     CHANGING_TIME = 3
