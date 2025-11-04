@@ -1,0 +1,12 @@
+{
+  "CHANGING_TIME" : 3,
+  "MAX_TIME_WINDOW" : 120,
+  "rawArrivalPeakOffset" : 15,
+  "rawDeparturePeakOffset" : 15,
+  "ATTENDANCE" : 1.0,
+  "TRAIN_PROPORTION" : 1,
+  "SIGMA_FACTOR" : 4,
+  "MINIMUM_PEOPLE" : 50,
+  "PERSON_DELAY" : 0.002,
+  "PROPAGATION_FACTOR" : 0.5
+}
