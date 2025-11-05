@@ -14,12 +14,8 @@ class StationModel(Base):
 
     # Relationships
     lines = relationship("StationLineRelationshipModel", back_populates="station")
-    connections_from = relationship(
-        "ConnectionModel", foreign_keys="ConnectionModel.StationA", back_populates="station_a"
-    )
-    connections_to = relationship(
-        "ConnectionModel", foreign_keys="ConnectionModel.StationB", back_populates="station_b"
-    )
+    connections_from = relationship("ConnectionModel", foreign_keys="ConnectionModel.StationA", back_populates="station_a")
+    connections_to = relationship("ConnectionModel", foreign_keys="ConnectionModel.StationB", back_populates="station_b")
     venue_relationships = relationship("VenueStationRelationshipModel", back_populates="station")
 
 
@@ -67,7 +63,6 @@ class VenueModel(Base):
 
     station_relationships = relationship("VenueStationRelationshipModel", back_populates="venue")
     events = relationship("EventModel", back_populates="venue")
-    teams = relationship("TeamModel", back_populates="venue")  # optional, inferred
 
 
 class VenueStationRelationshipModel(Base):
@@ -97,4 +92,14 @@ class EventModel(Base):
 class UserModel(Base):
     __tablename__ = "Users"
 
-    UserID = Colum
+    UserID = Column(Integer, primary_key=True, autoincrement=True)
+    Username = Column(Text)
+    PasswordHash = Column(Text)
+    Email = Column(Text)
+
+
+class TeamModel(Base):
+    __tablename__ = "Teams"
+
+    TeamName = Column(Text, primary_key=True)
+    VenueName = Column(Text)

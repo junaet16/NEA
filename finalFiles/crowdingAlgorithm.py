@@ -1,3 +1,5 @@
+import sys
+
 from pathFinding import MakeGraph, Dijkstra
 import datetime
 import sqlite3
@@ -24,8 +26,7 @@ def takeInput():
 
     return data
 
-#Testin
-#Test 2
+
 #Returns the approximate time of the middle of the journey (without consideration of delays and things)
 def calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME):
     journeyStart = baseInputData["journeyStart"]
@@ -233,13 +234,12 @@ def getParameters(username, databaseFile):
 
 
 #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries
-def createConnection(baseGraph, session, stations, connections, network):
+def createNetwork(baseGraph, session, stations, connections, network):
     for StationA in baseGraph.keys():
         stationInfo = session.query(models.StationModel).filter(models.StationModel.NaPTAN == StationA).first()
         NaPTAN = StationA
         StationName = stationInfo.StationName
-        TravelZone = stationInfo.TravelZone
-        baseStationClass = classes.NotAffectedDijkstraStation(NaPTAN, StationName, TravelZone)
+        baseStationClass = classes.NotAffectedDijkstraStation(NaPTAN, StationName)
         stations[StationA] = baseStationClass
 
         for connection in baseGraph[StationA]:
@@ -255,6 +255,7 @@ def createConnection(baseGraph, session, stations, connections, network):
     network.edges = connections
 
 
+#Starts off propagation of populations from each close station - then calls propegation() which then runs recursively
 def processEvents(events, databaseFile, parameterObject, baseGraph, network):
     ATTENDANCE = parameterObject.ATTENDANCE
     TRAIN_PROPORTION = parameterObject.TRAIN_PROPORTION
@@ -294,11 +295,42 @@ def processEvents(events, databaseFile, parameterObject, baseGraph, network):
                 propegation(baseGraph, station, people, MINIMUM_PEOPLE, network, event, PROPEGATION_FACTOR)
 
 
+#Calls methods to calculate the delay of each station
+def processAffectedStations(baseGraph, parameterObject, network):
+    PERSON_DELAY = parameterObject.PERSON_DELAY
+    for StationID in baseGraph.keys():
+        stationObject = network.nodes[StationID]
+        if stationObject.IsAffected():
+            stationObject.calculatePassengerLoad()
+            stationObject.calculateDelay(PERSON_DELAY)
 
 
+#Calls methods to calculate the delay of each connection
+def processAffectedConnections(network):
+    connectionObjects = network.edges
+    for edgeReference in connectionObjects.keys():
+        edge = connectionObjects[edgeReference]
+        connectionDelayFactor = 1
+        StationA = edge.StationA
+        StationB = edge.StationB
+        LineID = edge.LineID
+        BaseTravelTime = edge.BaseTravelTime
+        StationADelay = network.nodes[StationA].DelayFactor
+        StationBDelay = network.nodes[StationB].DelayFactor
+        if StationADelay or StationBDelay != 1:
+            newConnectionObject = classes.AffectedConnection(StationA, StationB, LineID, BaseTravelTime, StationADelay, StationBDelay)
+            newConnectionObject.returnDelay()
+            network.edges[(StationA, StationB, LineID)] = newConnectionObject
 
-def crowding(username, databaseFile):
-    engine = create_engine("sqlite:///test.db")
+
+#Delay of each station in the network is calculated, and then the delay of each connection is calculated
+def processAffected(baseGraph, parameterObject, network):
+    processAffectedStations(baseGraph, parameterObject, network)
+    processAffectedConnections(network)
+
+
+def getCrowdingFactor(username, databaseFile):
+    engine = create_engine(f"sqlite:///{databaseFile}")
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -309,10 +341,27 @@ def crowding(username, databaseFile):
     baseGraph = MakeGraph(databaseFile)
     network = classes.Network()
 
-    createConnection(baseGraph, session, stations, connections, network) #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries which are then stored in the network object
+    createNetwork(baseGraph, session, stations, connections, network) #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries which are then stored in the network object
     baseInputData = takeInput()
     midTimeObject = calculateDefaultMidjourneyTime(baseInputData, databaseFile, parameterObject.CHANGING_TIME)
     events = findEventsInTimeFrame(midTimeObject, databaseFile, baseInputData, parameterObject.MAX_TIME_WINDOW, parameterObject.arrivalPeakOffset, parameterObject.departurePeakOffset)
     processEvents(events, databaseFile, parameterObject, baseGraph, network)
+    processAffected(baseGraph, parameterObject, network)
 
-    #Gonna split into functions so won't need all of this but will just pass in the object and then extract data from there
+    #This results in a network object
+    #The network object has attributes edges and stations
+    #Stations contain a type of dijkstraStation objects which store delays
+    #Edges are connections which also store delays
+    #Network doesn't have to be returned in the above functions since the reference isn't changed
+
+    return network
+
+
+def main():
+    databaseFile = "final.db"
+    username = "PLACEHOLDER"
+    affectedNetwork = getCrowdingFactor(username, databaseFile)
+
+
+if __name__ == "__main__":
+    main()

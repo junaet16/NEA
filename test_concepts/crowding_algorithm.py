@@ -303,6 +303,5 @@ def main():
     #Nodes are stations and from this point on will probably not be needed anymore
     #Edges are connections, either affected or not - you can get the delayfactor attribute for each connection, which can then be used to either edit the values of a set of steps or edit the entire graph to then call Dijkstra again
 
-
 if __name__ == '__main__':
     main()

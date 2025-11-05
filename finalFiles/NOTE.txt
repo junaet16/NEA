@@ -5,3 +5,4 @@
 *Get AI to come up with good default numbers
 *Add comments to what the default numbers actually mean
 *Finish getParameters
+*Fix models
