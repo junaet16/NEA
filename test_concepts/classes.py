@@ -1,0 +1,109 @@
+from abc import ABC, abstractmethod
+
+
+class TransportClass(ABC):
+    def __init__(self):
+        self.currentPassengerLoad = 0
+        self.DelayFactor = 1
+
+    @abstractmethod
+    def IsAffected(self):
+        pass
+
+
+class Station(TransportClass):
+    def __init__(self, NaPTAN, StationName , TravelZone):
+        super().__init__()
+        self.NaPTAN = NaPTAN
+        self.StationName = StationName
+        self.TravelZone = TravelZone
+
+    def IsAffected(self):
+        pass
+
+
+class DijkstraStation(Station):
+    def __init__(self, NaPTAN, StationName, TravelZone):
+        super().__init__(NaPTAN, StationName, TravelZone)
+
+    def IsAffected(self):
+        pass
+
+
+class AffectedDijkstraStation(DijkstraStation):
+    def __init__(self, NaPTAN, StationName, TravelZone):
+        super().__init__(NaPTAN, StationName, TravelZone)
+        self.events = {} #{(VenueName, Date) : NumberOfPeople}
+
+    def IsAffected(self):
+        return True
+
+    def calculatePassengerLoad(self):
+        for event in self.events.keys():
+            numberOfPeople = self.events[event]
+            self.currentPassengerLoad += numberOfPeople
+            return self.currentPassengerLoad
+
+    def calculateDelay(self, PERSON_DELAY):
+        extraDelay = PERSON_DELAY * self.currentPassengerLoad
+        self.DelayFactor += extraDelay
+
+
+class NotAffectedDijkstraStation(DijkstraStation):
+    def __init__(self, NaPTAN, StationName, TravelZone):
+        super().__init__(NaPTAN, StationName, TravelZone)
+
+    def IsAffected(self):
+        return False
+
+
+#ParentClass of Dijkstra Connection
+class Connection(TransportClass):
+    def __init__(self, StationA, StationB, LineID, BaseTravelTime):
+        super().__init__()
+        self.StationA = StationA
+        self.StationB = StationB
+        self.LineID = LineID
+        self.BaseTravelTime = BaseTravelTime
+
+    @abstractmethod
+    def IsAffected(self):
+        pass
+
+    @abstractmethod
+    def returnDelay(self):
+        pass
+
+
+class NotAffectedConnection(Connection):
+    def __init__(self, StationA, StationB, LineID, BaseTravelTime):
+        super().__init__(StationA, StationB, LineID, BaseTravelTime)
+
+    def IsAffected(self):
+        return False
+
+    def returnDelay(self):
+        self.DelayFactor = 1
+        return 1
+
+
+class AffectedConnection(Connection):
+    def __init__(self, StationA, StationB, LineID, BaseTravelTime, StationADelayFactor, StationBDelayFactor):
+        super().__init__(StationA, StationB, LineID, BaseTravelTime)
+        self.StationADelayFactor = StationADelayFactor
+        self.StationBDelayFactor = StationBDelayFactor
+
+    def IsAffected(self):
+        return True
+
+    #Polymorphism?????
+    def returnDelay(self):
+        averageDelayFactor = (self.StationADelayFactor + self.StationBDelayFactor) / 2
+        self.DelayFactor = averageDelayFactor
+        return averageDelayFactor
+
+
+class Network():
+    def __init__(self):
+        self.nodes = {}
+        self.edges = {}

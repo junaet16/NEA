@@ -1,0 +1,21 @@
+{
+    "bakerloo": ["Bakerloo Line", 27.04],
+    "central": ["Central Line", 37.27],
+    "circle": ["Circle Line", 23.73],
+    "district": ["District Line", 29.19],
+    "hammersmith-city": ["Hammersmith and City Line", 25.33],
+    "jubilee": ["Jubilee Line", 39.11],
+    "metropolitan": ["Metropolitan Line", 45.61],
+    "northern": ["Northern Line", 33.28],
+    "piccadilly": ["Piccadilly Line", 33.11],
+    "victoria": ["Victoria Line", 40.66],
+    "waterloo-city": ["Waterloo and City Line", 33.3],
+    "dlr": ["DLR", 64.00],
+    "elizabeth": ["Elizabeth Line", 51.70],
+    "liberty": ["Liberty Line", 36.53],
+    "lioness": ["Lioness Line", 33.80],
+    "mildmay": ["Mildmay Line", 26.07],
+    "windrush": ["Windrush Line", 27.36],
+    "weaver": ["Weaver Line", 32.19],
+    "suffragette": ["Suffragette Line", 32.19]
+}
