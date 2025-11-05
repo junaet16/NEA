@@ -24,7 +24,8 @@ def takeInput():
 
     return data
 
-#Testing
+#Testin
+#Test 2
 #Returns the approximate time of the middle of the journey (without consideration of delays and things)
 def calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME):
     journeyStart = baseInputData["journeyStart"]
