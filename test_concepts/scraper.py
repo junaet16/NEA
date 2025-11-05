@@ -1,6 +1,5 @@
 import requests
 import bs4
-from bs4 import BeautifulSoup
 from datetime import datetime
 
 def get_elf_fixtures(url):

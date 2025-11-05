@@ -232,18 +232,87 @@ def getParameters(username, databaseFile):
     return parameterObject
 
 
-def crowding(username, databaseFile):
-    parameterObject = getParameters(username, databaseFile)
-    arrivalWindowMinutes = parameterObject.arrivalWindowMinutes
-    departureWindowMinutes = parameterObject.departureWindowMinutes
-    arrivalPeakOffset = parameterObject.arrivalPeakOffset
-    departurePeakOffset = parameterObject.departurePeakOffset
-    arrivalMinutesOffset = parameterObject.arrivalMinutesOffset
+#Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries
+def createConnection(baseGraph, session, stations, connections, network):
+    for StationA in baseGraph.keys():
+        stationInfo = session.query(models.StationModel).filter(models.StationModel.NaPTAN == StationA).first()
+        NaPTAN = StationA
+        StationName = stationInfo.StationName
+        TravelZone = stationInfo.TravelZone
+        baseStationClass = classes.NotAffectedDijkstraStation(NaPTAN, StationName, TravelZone)
+        stations[StationA] = baseStationClass
+
+        for connection in baseGraph[StationA]:
+            StationA = StationA
+            StationB = connection[0]
+            BaseTravelTime = connection[1]
+            LineID = connection[2]
+            baseConnectionClass = classes.NotAffectedConnection(StationA, StationB, LineID, BaseTravelTime)
+            key = (StationA, StationB, LineID)
+            connections[key] = baseConnectionClass
+
+    network.nodes = stations
+    network.edges = connections
+
+
+def processEvents(events, databaseFile, parameterObject, baseGraph, network):
     ATTENDANCE = parameterObject.ATTENDANCE
     TRAIN_PROPORTION = parameterObject.TRAIN_PROPORTION
+    arrivalWindowMinutes = parameterObject.arrivalWindowMinutes
+    departureWindowMinutes = parameterObject.departureWindowMinutes
+    arrivalMinutesOffset = parameterObject.arrivalMinutesOffset
+    departureMinutesOffset = parameterObject.departureMinutesOffset
     SIGMA_FACTOR = parameterObject.SIGMA_FACTOR
     MINIMUM_PEOPLE = parameterObject.MINIMUM_PEOPLE
-    PERSON_DELAY = parameterObject.PERSON_DELAY
-    PROPAGATION_FACTOR = parameterObject.PROPAGATION_FACTOR
+    PROPEGATION_FACTOR = parameterObject.PROPAGATION_FACTOR
+
+    for event in events.keys():
+        venue = event[0]
+        timings = events[event]
+        startDifferenceMinutes = timings[1]
+        endDifferenceMinutes = timings[2]
+        stationsWithDistances = returnStationsWithDistances()
+        capacity = findCapacity(databaseFile, venue)
+        baseNumberOfPeopleAtStations = findBaseNumberOfPeople(
+            capacity,
+            ATTENDANCE,
+            TRAIN_PROPORTION,
+            startDifferenceMinutes,
+            endDifferenceMinutes,
+            arrivalWindowMinutes,
+            departureWindowMinutes,
+            arrivalMinutesOffset,
+            departureMinutesOffset,
+            stationsWithDistances,
+            SIGMA_FACTOR
+        )
+        for station in baseNumberOfPeopleAtStations.keys():
+            arrivals = baseNumberOfPeopleAtStations[station][0]
+            departures = baseNumberOfPeopleAtStations[station][1]
+            people = max(arrivals, departures)
+            if people >= MINIMUM_PEOPLE:
+                propegation(baseGraph, station, people, MINIMUM_PEOPLE, network, event, PROPEGATION_FACTOR)
+
+
+
+
+
+def crowding(username, databaseFile):
+    engine = create_engine("sqlite:///test.db")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    stations = {}
+    connections = {}
+
+    parameterObject = getParameters(username, databaseFile)
+    baseGraph = MakeGraph(databaseFile)
+    network = classes.Network()
+
+    createConnection(baseGraph, session, stations, connections, network) #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries which are then stored in the network object
+    baseInputData = takeInput()
+    midTimeObject = calculateDefaultMidjourneyTime(baseInputData, databaseFile, parameterObject.CHANGING_TIME)
+    events = findEventsInTimeFrame(midTimeObject, databaseFile, baseInputData, parameterObject.MAX_TIME_WINDOW, parameterObject.arrivalPeakOffset, parameterObject.departurePeakOffset)
+    processEvents(events, databaseFile, parameterObject, baseGraph, network)
 
     #Gonna split into functions so won't need all of this but will just pass in the object and then extract data from there

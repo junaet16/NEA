@@ -302,8 +302,6 @@ def main():
     #Network holds a dictionary of nodes and edges
     #Nodes are stations and from this point on will probably not be needed anymore
     #Edges are connections, either affected or not - you can get the delayfactor attribute for each connection, which can then be used to either edit the values of a set of steps or edit the entire graph to then call Dijkstra again
-    for edge in network.edges.values():
-        print(edge.returnDelay())
 
 
 if __name__ == '__main__':
