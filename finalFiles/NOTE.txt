@@ -6,3 +6,9 @@
 *Add comments to what the default numbers actually mean
 *Finish getParameters
 *Fix models
+*Fix SQL schema to add relationships to users and teams
+*Fix SQL schema to add a new parameters table
+*Finish Date class
+*Get home team data into a JSON file
+*Finish AllDates class to be able to add fixtures to database
+*Finish scraper

@@ -163,3 +163,45 @@ class Parameters():
     def calculateMinutesOffset(self):
         self.arrivalMinutesOffset = self.arrivalPeakOffset.total_seconds() / 60
         self.departureMinutesOffset = self.departurePeakOffset.total_seconds() / 60
+
+
+class Fixture():
+    def __init__(self, league, home, away, time):
+        self.league = league
+        self.home = home
+        self.away = away
+        self.time = time
+
+
+#Date object contains the date and a list of fixture objects
+#Date object's findRelevantFixtures method deletes all fixtures not in London
+class Date():
+    def __init__(self, date, fixtures):
+        self.date = date
+        self.fixtures = fixtures
+
+    def findRelevantFixtures(self):
+        relevantFixtures = []
+        for fixture in self.fixtures:
+            home = fixture.home
+            London = False
+            #Check if home is in London - NEED to do
+            if London:
+                relevantFixtures.append(fixture)
+        self.fixtures = relevantFixtures
+
+
+#Contains a list of date objects
+class AllDates():
+    def __init__(self, dates):
+        self.dates = dates
+
+    def findRelevantDates(self):
+        relevantDates = []
+        for dateObject in self.dates:
+            dateObject.findRelevantFixtures() #Filters out all non-relevant
+            if len(dateObject.fixtures) > 0:
+                relevantDates.append(dateObject) #This means at least one event on this date is in London
+
+    def storeInDatabase(self):
+        pass #Finish

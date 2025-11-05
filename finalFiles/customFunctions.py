@@ -2,7 +2,7 @@ import requests
 import time
 
 
-def safeGet(url, params):
+def safeGet(url, params=None):
     waitTime = 65
     attempts = 3
     for attempt in range(attempts):
