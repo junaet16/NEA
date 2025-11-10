@@ -1,12 +1,10 @@
-import sys
-
 from pathFinding import MakeGraph, Dijkstra
 import datetime
 import sqlite3
 import math
 import models
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker, Session
 import classes
 
 
@@ -357,10 +355,47 @@ def getCrowdingFactor(username, databaseFile):
     return network
 
 
+def spreadDelay(network, databaseFile):
+    listOfLines = {}
+    listOfLinesWithConnectionObjects = {}
+
+    #Fetches a list of lines
+    databaseURL = f"sqlite:///{databaseFile}"
+    engine = create_engine(databaseURL)
+    with Session(engine) as session:
+        statement = select(models.LineModel.LineID)
+        lineIDs = session.scalars(statement).all()
+
+    #Edits the dictionary so that the keys are the lineIDs
+    for lineID in lineIDs:
+        listOfLines[lineID] = []
+
+    #Gets all the connections using a line and stores that connection object (memory reference) in the dictionary
+    for edgeKey in network.edges.keys():
+        lineID = edgeKey[2] #Contains the lineID of the connection
+        listOfLines[lineID].append(network.edges[edgeKey])
+
+    #Creates a line object for each line which would contain the list of connection objects belonging to that line, so that methods may be called
+    for lineID in listOfLines:
+        lineObject = classes.Line(listOfLines[lineID], lineID)
+        listOfLinesWithConnectionObjects[lineID] = lineObject
+
+    #Calls the methods to calculate the average delay across the entire line, so that the delay is consistent across the line (delays tend to affect the entire line as opposed to being local to a station or few)
+    for lineObject in listOfLinesWithConnectionObjects.values():
+        lineObject.doAllCalculations()
+
+    #Nothing needs to be returned as the objects themselves are not being changed to different objects, only their attributes are being changed and therefore their memory reference is the same
+
+
 def main():
     databaseFile = "final.db"
     username = "PLACEHOLDER"
     affectedNetwork = getCrowdingFactor(username, databaseFile)
+    spreadDelay(affectedNetwork, databaseFile) #For line, the connections belonging to that line will have the same delay stored in the LineDelay attribute (local delay is stored in DelayFactor)
+
+    for edgeKey in affectedNetwork.edges.keys():
+        connection = affectedNetwork.edges[edgeKey]
+        print(connection.DelayFactor, connection.LineDelay)
 
 
 if __name__ == "__main__":

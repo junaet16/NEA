@@ -75,6 +75,7 @@ class Connection(TransportClass):
         self.StationB = StationB
         self.LineID = LineID
         self.BaseTravelTime = BaseTravelTime
+        self.LineDelay = 0
 
     @abstractmethod
     def IsAffected(self):
@@ -117,6 +118,7 @@ class Network():
     def __init__(self):
         self.nodes = {}
         self.edges = {}
+        self.SpreadOutEdges = {}
 
 
 class Parameters():
@@ -205,3 +207,34 @@ class AllDates():
 
     def storeInDatabase(self):
         pass #Finish
+    
+
+class Line():
+    def __init__(self, connectionObjects, lineID):
+        self.connections = connectionObjects
+        self.numberOfConnections = 0
+        self.TotalDelay = 0
+        self.AverageDelay = 0
+        
+    def calculateTotalNumberOfConnections(self):
+        self.numberOfConnections = len(self.connections)
+        
+    def calculateTotalDelay(self):
+        totalDelay = 0
+        for connection in self.connections:
+            totalDelay += connection.DelayFactor
+        self.TotalDelay = totalDelay
+    
+    def calculateAverageDelay(self):
+        averageDelay = self.TotalDelay / self.numberOfConnections
+        self.AverageDelay = averageDelay
+    
+    def spreadDelay(self):
+        for connection in self.connections:
+            connection.LineDelay = self.AverageDelay
+
+    def doAllCalculations(self):
+        self.calculateTotalNumberOfConnections()
+        self.calculateTotalDelay()
+        self.calculateAverageDelay()
+        self.spreadDelay()

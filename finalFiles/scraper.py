@@ -28,12 +28,16 @@ def getNextTwelveMonths():
 
 #To get the actual numerical date of the month from the string fetched because it is originally in a form like "Saturday 12th December"
 def getDate(monthYear, restOfDate):
-    dayNumber = re.search(r"\d{1,2}", restOfDate).group()
-    if len(dayNumber) == 1:
-        dayNumber = "0" + dayNumber
-    year, month = monthYear.split("-")
-    date = f"{dayNumber}-{month}-{year}"
-    return date
+    try:
+        dayNumber = re.search(r"\d{1,2}", restOfDate).group()
+        if len(dayNumber) == 1:
+            dayNumber = "0" + dayNumber
+        year, month = monthYear.split("-")
+        date = f"{dayNumber}-{month}-{year}"
+        return date
+    except:
+        #Not a date
+        return "Error"
 
 
 def getPageFixtures(url, monthYear, tierName, fixtures):
@@ -45,18 +49,17 @@ def getPageFixtures(url, monthYear, tierName, fixtures):
         if tag.name == "h2": #This is where the date can be found
             text = tag.get_text(strip=True)
             currentDateText = text
-            if currentDateText != "Best of the BBC": #Some headings are this instead of the date
-                currentDate = getDate(monthYear, currentDateText)
-                #Creates a list to hold fixtures of the current date. If already made by another league, this prevents it being overwritten
-                try:
-                    test = fixtures[currentDate]
-                except:
-                    fixtures[currentDate] = []
-            else:
-                pass
+            currentDate = getDate(monthYear, currentDateText)
+            # Creates a list to hold fixtures of the current date. If already made by another league, this prevents it being overwritten
+            try:
+                test = fixtures[currentDate]
+                if currentDate == "Error":
+                    raise Exception("Not Date")
+            except:
+                fixtures[currentDate] = []
 
         elif tag.name == "span" and "versus" in tag.get_text(): #Where fixtures are stored
-            if currentDate != "Best of the BBC":
+            if currentDate != "Error":
                 text = tag.get_text(strip=True)
                 parts = text.split("versus")
                 home = parts[0].strip()
@@ -94,7 +97,7 @@ def main():
     for tierName in tiers.keys():
         tierID = tiers[tierName]
         for dateAddition in dateAdditions:
-            url = f"https://www.bbc.co.uk/sport/football/{tierID}/scores-fixtures/{dateAddition}"
+            url = f"https://www.bbc.co.uk/sport/football/{tierID}/scores-fixtures/{dateAddition}?filter=fixtures"
             fixtures = getPageFixtures(url, dateAddition, tierName, fixtures)
 
     #Stores everything into classes so that methods may be applied

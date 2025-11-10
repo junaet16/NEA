@@ -1,0 +1,16 @@
+{
+  "Arsenal" : ["Emirates Stadium", 60704],
+  "Brentford" : ["Brentford Community Stadium", 18250],
+  "Chelsea" : ["Stamford Bridge", 40343],
+  "Crystal Palace" : ["Selhurst Park", 25486],
+  "Fulham" : ["Craven Cottage", 29600],
+  "Tottenham Hotspur" : ["Tottenham Hotspur Stadium", 62850],
+  "West Ham United" : ["London Stadium", 62500],
+  "Charlton Athletic" : ["The Valley Stadium", 27111],
+  "Millwall": ["The Den Stadium", 20146],
+  "Queens Park Rangers" : ["Loftus Road Stadium", 18439],
+  "AFC Wimbledon" : ["Plough Lane Stadium", 9300],
+  "Leyton Orient" : ["Brisbane Road Stadium", 9271],
+  "Barnet" : ["The Hive Stadium", 5100],
+  "Bromley" : ["Hayes Lane", 5150]
+}
