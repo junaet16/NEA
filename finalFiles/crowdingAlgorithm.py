@@ -395,7 +395,13 @@ def main():
 
     for edgeKey in affectedNetwork.edges.keys():
         connection = affectedNetwork.edges[edgeKey]
-        print(connection.DelayFactor, connection.LineDelay)
+        print(connection.connectionReference, connection.DelayFactor, connection.LineDelay)
+        pass
+
+    for nodeKey in affectedNetwork.nodes.keys():
+        node = affectedNetwork.nodes[nodeKey]
+        print(node.StationName, node.NaPTAN, node.DelayFactor)
+        pass
 
 
 if __name__ == "__main__":

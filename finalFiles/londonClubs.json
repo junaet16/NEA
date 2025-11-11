@@ -6,11 +6,11 @@
   "Fulham" : ["Craven Cottage", 29600],
   "Tottenham Hotspur" : ["Tottenham Hotspur Stadium", 62850],
   "West Ham United" : ["London Stadium", 62500],
-  "Charlton Athletic" : ["The Valley Stadium", 27111],
-  "Millwall": ["The Den Stadium", 20146],
+  "Charlton Athletic" : ["The Valley, London", 27111],
+  "Millwall": ["The Den", 20146],
   "Queens Park Rangers" : ["Loftus Road Stadium", 18439],
   "AFC Wimbledon" : ["Plough Lane Stadium", 9300],
   "Leyton Orient" : ["Brisbane Road Stadium", 9271],
   "Barnet" : ["The Hive Stadium", 5100],
-  "Bromley" : ["Hayes Lane", 5150]
+  "Bromley" : ["Hayes Lane Stadium", 5150]
 }

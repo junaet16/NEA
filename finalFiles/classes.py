@@ -52,7 +52,7 @@ class AffectedDijkstraStation(DijkstraStation):
         for event in self.events.keys():
             numberOfPeople = self.events[event]
             self.currentPassengerLoad += numberOfPeople
-            return self.currentPassengerLoad
+        return self.currentPassengerLoad
 
     def calculateDelay(self, PERSON_DELAY):
         extraDelay = PERSON_DELAY * self.currentPassengerLoad
@@ -74,6 +74,7 @@ class Connection(TransportClass):
         self.StationA = StationA
         self.StationB = StationB
         self.LineID = LineID
+        self.connectionReference = (self.StationA, self.StationB, self.LineID)
         self.BaseTravelTime = BaseTravelTime
         self.LineDelay = 0
 
