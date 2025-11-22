@@ -1,5 +1,8 @@
 import sqlite3
 import json
+import getTfLData
+import storeStadiumData
+import scraper
 
 
 #Creates the database
@@ -51,6 +54,7 @@ def createDatabase(databaseFile):
         CREATE TABLE IF NOT EXISTS VenueStationRelationships (
             VenueName TEXT,
             NaPTAN TEXT,
+            Distance REAL,
             PRIMARY KEY (VenueName, NaPTAN),
             FOREIGN KEY (VenueName) REFERENCES Venues(VenueName),
             FOREIGN KEY (NaPTAN) REFERENCES Stations(NaPTAN)
@@ -109,10 +113,13 @@ def createLines(databaseFile, jsonFile):
     connection.close()
 
 
-def main(databaseFile, jsonFile):
+def main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonFile, leaguesjsonFile):
     createDatabase(databaseFile)
-    createLines(databaseFile, jsonFile)
+    createLines(databaseFile, LinesjsonFile)
+    getTfLData.main(TfL_API_KEY, databaseFile)
+    storeStadiumData.main(OPENCAGE_API_KEY, londonjsonFile, databaseFile, 15, 5)
+    scraper.main(databaseFile, leaguesjsonFile)
 
 
 if __name__ == '__main__':
-    main("final.db", "lines.json")
+    main("final.db", "lines.json", "0ff5a2076cd640cb957e63d6947efc61", "eb0e2c9b71cc45f7aafe0ae4ecc44cc2", "londonClubs.json", "leagues.json")

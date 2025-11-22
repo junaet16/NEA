@@ -3,6 +3,7 @@ import datetime
 from customFunctions import safeGet
 import re
 import classes
+import json
 
 
 #So that 12 months of fixtures can be fetched from the date of request
@@ -82,15 +83,10 @@ def getPageFixtures(url, monthYear, tierName, fixtures):
     return fixtures
 
 
-def main():
+def main(databaseFile, leaguesFile):
     fixtures = {}
-    tiers = {
-        "Premier League": "premier-league",
-        "Championship": "championship",
-        "League One": "league-one",
-        "League Two": "league-two",
-    }
-
+    with open(leaguesFile, "r") as leaguesFileObject:
+        tiers = json.load(leaguesFileObject)
     dateAdditions = getNextTwelveMonths()
 
     #Results in a dictionary of lists containing dictionaries in the format : {Date: [{"league" : "A", "home" : "B", "away" : "C", "time" : "D"}]}
@@ -115,10 +111,9 @@ def main():
         dateObjectList.append(dateObject)
     AllDatesObject = classes.AllDates(dateObjectList)
 
-    for dateObject in AllDatesObject.dates:
-        print(dateObject.date)
-        for fixture in dateObject.fixtures:
-            print(fixture.league, fixture.home, fixture.away, fixture.time)
+    AllDatesObject.findRelevantDates(databaseFile)
+    AllDatesObject.storeInDatabase(databaseFile)
+
 
 if __name__ == '__main__':
-    main()
+    main("final.db", "leagues.json")

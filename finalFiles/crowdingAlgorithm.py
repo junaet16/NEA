@@ -2,19 +2,11 @@ from pathFinding import MakeGraph, Dijkstra
 import datetime
 import sqlite3
 import math
-import models
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker, Session
 import classes
 
 
-def takeInput():
-    #For testing purposes this will now be a default value
-    date = "12/12/2026"
-    journeyStart = "13:00"
-    startStation = "940GZZLULYS"
-    endStation = "HUBSRA"
-
+#Kinda useless but kept it because annoying to remove now
+def takeInput(date, journeyStart, startStation, endStation):
     data = {
         "date": date,
         "journeyStart": journeyStart,
@@ -103,9 +95,22 @@ def inverseWeight(stationDistances):
     return proportions
 
 
-def returnStationsWithDistances():
-    #Ok the actual one will with Google Maps API and stuff but for now I will just return a default value
-    stationsWithDistances = {"940GZZLUASL":200, "HUBHHY": 300, "940GZZLUHWY":500}
+def returnStationsWithDistances(VenueName, databaseFile):
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+    stationsWithDistances = {}
+
+    cursor.execute("""
+        SELECT NaPTAN, Distance
+        FROM VenueStationRelationships
+        WHERE VenueName = ?
+    """, (VenueName,))
+    rows = cursor.fetchall()
+
+    for stationTuple in rows:
+        stationsWithDistances[stationTuple[0]] = stationTuple[1]
+
+    connection.close()
     return stationsWithDistances
 
 
@@ -160,11 +165,16 @@ def findBaseNumberOfPeople(
 
 
 def findCapacity(databaseFile, VenueName):
-    engine = create_engine(f"sqlite:///{databaseFile}")
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    venue = session.query(models.VenueModel).filter(models.VenueModel.VenueName == VenueName).first()
-    return venue.Capacity
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT Capacity
+        FROM Venues
+        Where VenueName = ?
+        """, (VenueName,))
+    capacity = cursor.fetchall()[0][0]
+    connection.close()
+    return capacity
 
 
 #Recursion???????
@@ -199,7 +209,7 @@ def propegation(graph, stationID, people, MINIMUM_PEOPLE, network, event, PROPEG
 
 #Creates a parameter object to store the parameters used for calculation
 def getParameters(username, databaseFile):
-    #Real one will get from database
+    #Real one will get from database using username
     CHANGING_TIME = 3
     MAX_TIME_WINDOW = 120
     rawArrivalPeakOffset = 15
@@ -232,11 +242,20 @@ def getParameters(username, databaseFile):
 
 
 #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries
-def createNetwork(baseGraph, session, stations, connections, network):
+def createNetwork(baseGraph, databaseFile, stations, connections, network):
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+
     for StationA in baseGraph.keys():
-        stationInfo = session.query(models.StationModel).filter(models.StationModel.NaPTAN == StationA).first()
+        cursor.execute("""
+            SELECT StationName
+            FROM Stations
+            WHERE NaPTAN = ?
+            """, (StationA,))
+        row = cursor.fetchall()
+        StationName = row[0][0]
+
         NaPTAN = StationA
-        StationName = stationInfo.StationName
         baseStationClass = classes.NotAffectedDijkstraStation(NaPTAN, StationName)
         stations[StationA] = baseStationClass
 
@@ -270,7 +289,7 @@ def processEvents(events, databaseFile, parameterObject, baseGraph, network):
         timings = events[event]
         startDifferenceMinutes = timings[1]
         endDifferenceMinutes = timings[2]
-        stationsWithDistances = returnStationsWithDistances()
+        stationsWithDistances = returnStationsWithDistances(venue, databaseFile)
         capacity = findCapacity(databaseFile, venue)
         baseNumberOfPeopleAtStations = findBaseNumberOfPeople(
             capacity,
@@ -327,11 +346,7 @@ def processAffected(baseGraph, parameterObject, network):
     processAffectedConnections(network)
 
 
-def getCrowdingFactor(username, databaseFile):
-    engine = create_engine(f"sqlite:///{databaseFile}")
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
+def getCrowdingFactor(username, databaseFile, date, journeyStart, startStation, endStation):
     stations = {}
     connections = {}
 
@@ -339,10 +354,19 @@ def getCrowdingFactor(username, databaseFile):
     baseGraph = MakeGraph(databaseFile)
     network = classes.Network()
 
-    createNetwork(baseGraph, session, stations, connections, network) #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries which are then stored in the network object
-    baseInputData = takeInput()
-    midTimeObject = calculateDefaultMidjourneyTime(baseInputData, databaseFile, parameterObject.CHANGING_TIME)
-    events = findEventsInTimeFrame(midTimeObject, databaseFile, baseInputData, parameterObject.MAX_TIME_WINDOW, parameterObject.arrivalPeakOffset, parameterObject.departurePeakOffset)
+    createNetwork(baseGraph, databaseFile, stations, connections, network) #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries which are then stored in the network object
+    baseInputData = takeInput(date, journeyStart, startStation, endStation)
+    midTimeObject = calculateDefaultMidjourneyTime(
+        baseInputData,
+        databaseFile,
+        parameterObject.CHANGING_TIME)
+    events = findEventsInTimeFrame(
+        midTimeObject,
+        databaseFile,
+        baseInputData,
+        parameterObject.MAX_TIME_WINDOW,
+        parameterObject.arrivalPeakOffset,
+        parameterObject.departurePeakOffset)
     processEvents(events, databaseFile, parameterObject, baseGraph, network)
     processAffected(baseGraph, parameterObject, network)
 
@@ -359,12 +383,18 @@ def spreadDelay(network, databaseFile):
     listOfLines = {}
     listOfLinesWithConnectionObjects = {}
 
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+
     #Fetches a list of lines
-    databaseURL = f"sqlite:///{databaseFile}"
-    engine = create_engine(databaseURL)
-    with Session(engine) as session:
-        statement = select(models.LineModel.LineID)
-        lineIDs = session.scalars(statement).all()
+    cursor.execute("""
+        SELECT LineID
+        FROM Lines""")
+    rows = cursor.fetchall()
+    lineIDs = []
+    for row in rows:
+        lineIDs.append(row[0])
+    connection.close()
 
     #Edits the dictionary so that the keys are the lineIDs
     for lineID in lineIDs:
@@ -387,10 +417,8 @@ def spreadDelay(network, databaseFile):
     #Nothing needs to be returned as the objects themselves are not being changed to different objects, only their attributes are being changed and therefore their memory reference is the same
 
 
-def main():
-    databaseFile = "final.db"
-    username = "PLACEHOLDER"
-    affectedNetwork = getCrowdingFactor(username, databaseFile)
+def main(date, journeyStart, startStation, endStation, databaseFile, username):
+    affectedNetwork = getCrowdingFactor(username, databaseFile, date, journeyStart, startStation, endStation)
     spreadDelay(affectedNetwork, databaseFile) #For line, the connections belonging to that line will have the same delay stored in the LineDelay attribute (local delay is stored in DelayFactor)
 
     for edgeKey in affectedNetwork.edges.keys():
@@ -405,4 +433,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    date = "23/11/2025"
+    journeyStart = "15:00"
+    startStation = "940GZZLULYS"
+    endStation = "HUBSRA"
+    databaseFile = "final.db"
+    username = "PLACEHOLDER"
+    main(date, journeyStart, startStation, endStation, databaseFile, username)

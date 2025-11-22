@@ -1,6 +1,7 @@
 import sqlite3
 import classes
 from customFunctions import safeGet
+from geopy.distance import geodesic
 
 
 # Creates a dictionary with the format - {NaPTAN : Station object}
@@ -93,6 +94,19 @@ def getStationLineRelationships(databseFile):
     connection.close()
 
 
+def getStationCoordinates(databseFile, StationID):
+    connection = sqlite3.connect(databseFile)
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT Latitude, Longitude 
+        FROM Stations
+        WHERE NaPTAN = ?
+    """, (StationID, ))
+    coordinates = cursor.fetchall()[0]
+    connection.close()
+    return coordinates
+
+
 def SaveTfLData(databaseFile, TfL_API_KEY):
     stationDictionary, linesDictionary = fetchTfLData(databaseFile, TfL_API_KEY)
     connection = sqlite3.connect(databaseFile)
@@ -107,29 +121,37 @@ def SaveTfLData(databaseFile, TfL_API_KEY):
             INSERT OR REPLACE INTO Stations (NaPTAN, StationName, Latitude, Longitude) 
             VALUES (?, ?, ?, ?)
             """, (NaPTAN, StationName, Latitude, Longitude))
+        connection.commit()
 
     for line in linesDictionary.keys():
         LineID = line
         branches = linesDictionary[line]
         for branch in branches:
             for i in range(len(branch) - 1):
-                try:
-                    StationA = branch[i]
-                    StationB = branch[i + 1]
+                StationA = branch[i]
+                StationB = branch[i + 1]
 
-                    BaseTravelTime = 3  # Calculate Base Travel Time Here Later
+                cursor.execute("""
+                    SELECT AverageSpeed
+                    From Lines
+                    WHERE LineID = ?
+                """, (LineID,))
+                AverageSpeed = float(cursor.fetchall()[0][0])
 
-                    # So that reverse is possible
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO Connections (StationA, StationB, LineID, BaseTravelTime)
-                        VALUES (?, ?, ?, ?)
-                        """, (StationA, StationB, LineID, BaseTravelTime))
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO Connections (StationA, StationB, LineID, BaseTravelTime)
-                        VALUES (?, ?, ?, ?)
-                        """, (StationB, StationA, LineID, BaseTravelTime))
-                except:
-                    pass
+                stationACoordinates = getStationCoordinates(databaseFile, StationA)
+                stationBCoordinates = getStationCoordinates(databaseFile, StationB)
+                distanceKM = geodesic(stationACoordinates, stationBCoordinates).km
+                BaseTravelTime = (distanceKM / AverageSpeed) * 60
+
+                # So that reverse is possible
+                cursor.execute("""
+                    INSERT OR REPLACE INTO Connections (StationA, StationB, LineID, BaseTravelTime)
+                    VALUES (?, ?, ?, ?)
+                    """, (StationA, StationB, LineID, BaseTravelTime))
+                cursor.execute("""
+                    INSERT OR REPLACE INTO Connections (StationA, StationB, LineID, BaseTravelTime)
+                    VALUES (?, ?, ?, ?)
+                    """, (StationB, StationA, LineID, BaseTravelTime))
 
     connection.commit()
     connection.close()
@@ -141,6 +163,8 @@ def main(TFL_API_KEY, databaseFile):
     SaveTfLData(databaseFile, TFL_API_KEY)
 
 
+
 if __name__ == "__main__":
     TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
     main(TfL_API_KEY, "final.db")
+    pass
