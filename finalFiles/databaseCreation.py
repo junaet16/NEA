@@ -76,12 +76,25 @@ def createDatabase(databaseFile):
             UserID INTEGER PRIMARY KEY AUTOINCREMENT,
             Username TEXT,
             PasswordHash TEXT,
-            Email TEXT
+            Email TEXT,
+            CHANGING_TIME REAL,
+            MAX_TIME_WINDOW REAL,
+            rawArrivalPeakOffset REAL,
+            rawDeparturePeakOffset REAL,
+            ATTENDANCE REAL,
+            TRAIN_PROPORTION REAL,
+            SIGMA_FACTOR REAL,
+            MINIMUM_PEOPLE REAL,
+            PERSON_DELAY REAL,
+            PROPAGATION_FACTOR REAL,
+            WALKING_TIME REAL,
+            WALKING_SPEED REAL
         );
 
         CREATE TABLE IF NOT EXISTS Teams (
             TeamName TEXT PRIMARY KEY,
             VenueName TEXT
+            FOREIGN KEY (VenueName) REFERENCES Venues(VenueName)
         );
 
     """)
