@@ -73,10 +73,9 @@ def createDatabase(databaseFile):
         );
 
         CREATE TABLE IF NOT EXISTS Users (
-            UserID INTEGER PRIMARY KEY AUTOINCREMENT,
-            Username TEXT,
+            Username TEXT PRIMARY KEY,
             PasswordHash TEXT,
-            Email TEXT,
+            Salt,
             CHANGING_TIME REAL,
             MAX_TIME_WINDOW REAL,
             rawArrivalPeakOffset REAL,
@@ -93,7 +92,7 @@ def createDatabase(databaseFile):
 
         CREATE TABLE IF NOT EXISTS Teams (
             TeamName TEXT PRIMARY KEY,
-            VenueName TEXT
+            VenueName TEXT,
             FOREIGN KEY (VenueName) REFERENCES Venues(VenueName)
         );
 
@@ -128,10 +127,15 @@ def createLines(databaseFile, jsonFile):
 
 def main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonFile, leaguesjsonFile):
     createDatabase(databaseFile)
+    print("Database created")
     createLines(databaseFile, LinesjsonFile)
+    print("Lines created")
     getTfLData.main(TfL_API_KEY, databaseFile)
+    print("TfL data fetched")
     storeStadiumData.main(OPENCAGE_API_KEY, londonjsonFile, databaseFile, 15, 5)
+    print("Get stadium data")
     scraper.main(databaseFile, leaguesjsonFile)
+    print("Scraped data")
 
 
 if __name__ == '__main__':

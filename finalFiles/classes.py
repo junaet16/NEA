@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import sqlite3
+import json
 
 
 class TransportClass(ABC):
@@ -167,6 +168,18 @@ class Parameters():
     def calculateMinutesOffset(self):
         self.arrivalMinutesOffset = self.arrivalPeakOffset.total_seconds() / 60
         self.departureMinutesOffset = self.departurePeakOffset.total_seconds() / 60
+
+
+class AccountCreationParameters(Parameters):
+    def __init__(self, defaultParameters):
+        super().__init__(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.megaDictionary = {}
+
+        with open(defaultParameters, 'r') as file:
+            rawData = json.load(file)
+
+        for parameterName, value in rawData.items():
+            self.megaDictionary[parameterName] = value
 
 
 class Fixture():
