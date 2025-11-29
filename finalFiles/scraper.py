@@ -45,6 +45,15 @@ def getPageFixtures(url, monthYear, tierName, fixtures):
     response = safeGet(url)
     soup = bs4.BeautifulSoup(response.text, "html.parser")
 
+    #Check if there is a link to today's fixtures
+    today_link = soup.find("a", id="today")
+    if today_link:
+        currentDate = datetime.datetime.now().strftime("%d-%m-%Y")  #Today's date in dd-mm-yyyy format
+        try:
+            test = fixtures[currentDate]
+        except:
+            fixtures[currentDate] = []
+
     #On the webpage, the fixtures are below each date, so fetch the date first and find all fixtures until the next date, so that these fixtures can be stored under the stored date
     for tag in soup.find_all(["h2", "span"]):
         if tag.name == "h2": #This is where the date can be found

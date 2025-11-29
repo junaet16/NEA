@@ -1,7 +1,3 @@
-*Need to add new table to database to store parameters for each user
-    *Need to update models after this
 *Get AI to come up with good default numbers
 *Add comments to what the default numbers actually mean
-*Finish getParameters
-*Fix SQL schema to add relationships to users and teams
-*Fix SQL schema to add a new parameters table
+*Currently, StationLineRelationships has no use, so at the end, show which lines are available at the beginning and end of the journey

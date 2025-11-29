@@ -3,6 +3,7 @@ import datetime
 import sqlite3
 import math
 import classes
+import customFunctions
 
 
 #Kinda useless but kept it because annoying to remove now
@@ -209,35 +210,7 @@ def propegation(graph, stationID, people, MINIMUM_PEOPLE, network, event, PROPEG
 
 #Creates a parameter object to store the parameters used for calculation
 def getParameters(username, databaseFile):
-    #Real one will get from database using username
-    CHANGING_TIME = 3
-    MAX_TIME_WINDOW = 120
-    rawArrivalPeakOffset = 15
-    rawDeparturePeakOffset = 15
-    ATTENDANCE = 1.0 #Percentance of the stadium full
-    TRAIN_PROPORTION = 1 #The number of event attendees using TFL rail services
-    SIGMA_FACTOR = 4
-    MINIMUM_PEOPLE = 50 #The minimum number of people for a station to be considered affected
-    PERSON_DELAY = 0.002 #Percentage delay increase per extra person
-    PROPEGATION_FACTOR = 0.5
-
-    parameterObject = classes.Parameters(
-        CHANGING_TIME,
-        MAX_TIME_WINDOW,
-        rawArrivalPeakOffset,
-        rawDeparturePeakOffset,
-        ATTENDANCE,
-        TRAIN_PROPORTION,
-        SIGMA_FACTOR,
-        MINIMUM_PEOPLE,
-        PERSON_DELAY,
-        PROPEGATION_FACTOR
-    )
-
-    parameterObject.calculateWindow()
-    parameterObject.calculatePeakOffset()
-    parameterObject.calculateMinutesOffset()
-
+    parameterObject = customFunctions.getParameters(username, databaseFile)
     return parameterObject
 
 
@@ -423,20 +396,22 @@ def main(date, journeyStart, startStation, endStation, databaseFile, username):
 
     for edgeKey in affectedNetwork.edges.keys():
         connection = affectedNetwork.edges[edgeKey]
-        print(connection.connectionReference, connection.DelayFactor, connection.LineDelay)
+        #print(connection.connectionReference, connection.DelayFactor, connection.LineDelay)
         pass
 
     for nodeKey in affectedNetwork.nodes.keys():
         node = affectedNetwork.nodes[nodeKey]
-        print(node.StationName, node.NaPTAN, node.DelayFactor)
+        #print(node.StationName, node.NaPTAN, node.DelayFactor)
         pass
+
+    return affectedNetwork
 
 
 if __name__ == "__main__":
-    date = "23/11/2025"
-    journeyStart = "15:00"
+    date = "03/12/2025"
+    journeyStart = "18:00"
     startStation = "940GZZLULYS"
     endStation = "HUBSRA"
     databaseFile = "final.db"
-    username = "PLACEHOLDER"
+    username = "Junaet"
     main(date, journeyStart, startStation, endStation, databaseFile, username)

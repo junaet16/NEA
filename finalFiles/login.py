@@ -21,14 +21,35 @@ def createAccount(defaultParametersFile, username, password, databaseFile):
     salt = generateSalt()
     hashedPassword = createHashPassword(password, salt)
     defaultParametersObject = classes.AccountCreationParameters(defaultParametersFile)
-    parametersDictionary = defaultParametersObject.megaDictionary
+
+    parameterTuple = (
+        username,
+        hashedPassword,
+        salt,
+        defaultParametersObject.CHANGING_TIME,
+        defaultParametersObject.MAX_TIME_WINDOW,
+        defaultParametersObject.rawArrivalPeakOffset,
+        defaultParametersObject.rawDeparturePeakOffset,
+        defaultParametersObject.ATTENDANCE,
+        defaultParametersObject.TRAIN_PROPORTION,
+        defaultParametersObject.SIGMA_FACTOR,
+        defaultParametersObject.MINIMUM_PEOPLE,
+        defaultParametersObject.PERSON_DELAY,
+        defaultParametersObject.PROPAGATION_FACTOR,
+        defaultParametersObject.WALKING_TIME,
+        defaultParametersObject.WALKING_SPEED,
+        defaultParametersObject.NORMAL,
+        defaultParametersObject.SLIGHTLY,
+        defaultParametersObject.BUSY
+    )
 
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
 
     try:
-        cursor.execute("""
-            INSERT INTO Users (
+        cursor.execute(
+            """
+            INSERT INTO Users(
                 Username, 
                 PasswordHash, 
                 Salt, 
@@ -43,39 +64,52 @@ def createAccount(defaultParametersFile, username, password, databaseFile):
                 PERSON_DELAY, 
                 PROPAGATION_FACTOR, 
                 WALKING_TIME, 
-                WALKING_SPEED
+                WALKING_SPEED,
+                NORMAL,
+                SLIGHTLY,
+                BUSY
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-                       (username,
-                        hashedPassword,
-                        salt,
-                        parametersDictionary["CHANGING_TIME"],
-                        parametersDictionary["MAX_TIME_WINDOW"],
-                        parametersDictionary["rawArrivalPeakOffset"],
-                        parametersDictionary["rawDeparturePeakOffset"],
-                        parametersDictionary["ATTENDANCE"],
-                        parametersDictionary["TRAIN_PROPORTION"],
-                        parametersDictionary["SIGMA_FACTOR"],
-                        parametersDictionary["MINIMUM_PEOPLE"],
-                        parametersDictionary["PERSON_DELAY"],
-                        parametersDictionary["PROPAGATION_FACTOR"],
-                        parametersDictionary["WALKING_TIME"],
-                        parametersDictionary["WALKING_SPEED"])
-                       )
-        connection.commit()
-        connection.close()
+            parameterTuple
+        )
         accountMade = True
     except:
         accountMade = False
 
+    connection.commit()
+    connection.close()
 
-def login(defaultParametersFile, username, password):
-    pass
+    return accountMade
+
+
+def login(databaseFile, username, password):
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT PasswordHash, Salt
+        FROM Users
+        WHERE Username = ?
+    """, (username,))
+    result = cursor.fetchall()[0]
+    storedHash, storedSalt = result
+
+    loginHash = createHashPassword(password, storedSalt)
+
+    if loginHash == storedHash:
+        loginSuccessful = True
+    else:
+        loginSuccessful = False
+
+    return loginSuccessful
 
 
 def main(username, password, defaultParametersFile, databaseFile):
-    createAccount(defaultParametersFile, username, password, databaseFile)
+    accountCreated = createAccount(defaultParametersFile, username, password, databaseFile)
+    loginSuccessful = login(databaseFile, username, password)
+    print(accountCreated)
+    print(loginSuccessful)
 
 
 if __name__ == '__main__':
