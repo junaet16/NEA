@@ -8,18 +8,16 @@ import classes
 def GetaffectedGraph(baseGraph, affectedNetwork):
     affectedGraph = copy.deepcopy(baseGraph)
 
-    for edgeKey in affectedNetwork.edges.keys():
-        connection = affectedNetwork.edges[edgeKey]
-        StationA = connection.StationA
-        StationB = connection.StationB
-        LineID = connection.LineID
-        connectedStations = affectedGraph[StationB]
-
-        for i, connectedStationData in enumerate(connectedStations):
-            if connectedStationData[0] == StationB and connectedStationData[2] == LineID:
-                oldTime = connectedStationData[1]
-                newTime = oldTime * connection.DelayFactor
-                connectedStationData[1] = newTime
+    for StationA in affectedGraph.keys():
+        connectedStations = affectedGraph[StationA]
+        for connection in connectedStations:
+            StationB = connection[0]
+            LineID = connection[2]
+            key = (StationA, StationB, LineID)
+            LineDelay = affectedNetwork.edges[key].LineDelay
+            oldTime = connection[1]
+            newTime = oldTime * LineDelay
+            connection[1] = newTime
 
     return affectedGraph
 
@@ -29,8 +27,7 @@ def getAffectedOldPath(oldPath, affectedNetwork):
     for station in oldPath:
         key = (station[0], station[1], station[2])
         connection = affectedNetwork.edges[key]
-        DelayFactor = connection.DelayFactor
-        newTime = station[3] * DelayFactor
+        newTime = station[3] * connection.LineDelay
         newData = (station[0], station[1], station[2], newTime)
         affectedOldPath.append(newData)
 
@@ -43,6 +40,8 @@ def main(date, journeyStart, startStation, endStation, databaseFile, username):
 
     baseGraph = pathFinding.MakeGraph(databaseFile)
     affectedGraph = GetaffectedGraph(baseGraph, affectedNetwork)
+    print(baseGraph)
+    print(affectedGraph)
 
     oldPath = pathFinding.Dijkstra(baseGraph, startStation, endStation, parameters.CHANGING_TIME)
     affectedOldPath = getAffectedOldPath(oldPath, affectedNetwork)
