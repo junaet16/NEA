@@ -1,4 +1,4 @@
 *Get AI to come up with good default numbers
 *Add comments to what the default numbers actually mean
-*Currently, StationLineRelationships has no use, so at the end, show which lines are available at the beginning and end of the journey
 *Do that dropdown table where you can type to get a list of stations to pick from
+*Need to think of a name

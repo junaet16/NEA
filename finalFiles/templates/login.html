@@ -1,0 +1,22 @@
+<html>
+    <head>
+        <title>TITLE OF PROGRAMME</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='loginStyle.css') }}">
+    </head>
+    <body class="page">
+        <h1 class="title">TITTLE OF PROGRAMME</h1>
+        <div class="container">
+            <form class="loginForm" method="POST">
+                <input class="textInput" type="text" name="username" placeholder="Username">
+                <input class="textInput" type="password" name="password" placeholder="Password">
+                <div class="buttonRow">
+                    <button class="button" type="submit" name="actionName" value="login">Login</button>
+                    <button class="button" type="submit" name="actionName" value="signUp">Sign Up</button>
+                </div>
+            </form>
+            {% if message %}
+                <div class="message">{{message}}</div>
+            {% endif %}
+        </div>
+    </body>
+</html>
