@@ -1,22 +1,52 @@
+<!DOCTYPE html>
 <html>
-    <head>
-        <title>TITLE OF PROGRAMME</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='loginStyle.css') }}">
-    </head>
-    <body class="page">
-        <h1 class="title">TITTLE OF PROGRAMME</h1>
-        <div class="container">
-            <form class="loginForm" method="POST">
-                <input class="textInput" type="text" name="username" placeholder="Username">
-                <input class="textInput" type="password" name="password" placeholder="Password">
-                <div class="buttonRow">
-                    <button class="button" type="submit" name="actionName" value="login">Login</button>
-                    <button class="button" type="submit" name="actionName" value="signUp">Sign Up</button>
-                </div>
-            </form>
-            {% if message %}
-                <div class="message">{{message}}</div>
-            {% endif %}
-        </div>
-    </body>
+<head>
+    <meta charset="UTF-8">
+    <title>Title of Programme</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='loginStyle.css') }}">
+</head>
+
+<body class="page">
+
+    <h1 class="title">Title of Programme</h1>
+
+    <div class="container">
+
+        <form class="loginForm" method="POST">
+
+            <input
+                class="textInput"
+                type="text"
+                name="username"
+                placeholder="Username"
+                required
+            >
+
+            <input
+                class="textInput"
+                type="password"
+                name="password"
+                placeholder="Password"
+                required
+            >
+
+            <div class="buttonRow">
+                <button class="button" type="submit" name="actionName" value="login">
+                    Login
+                </button>
+
+                <button class="button" type="submit" name="actionName" value="signUp">
+                    Sign Up
+                </button>
+            </div>
+
+        </form>
+
+        {% if message %}
+            <div class="message">{{ message }}</div>
+        {% endif %}
+
+    </div>
+
+</body>
 </html>

@@ -1,0 +1,34 @@
+.body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.mainContainer {
+    display: flex;
+    height: 70vh;
+}
+
+.inputSection {
+    width: 33%;
+    padding: 20px;
+}
+
+.submitButton {
+    width: 100%;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.outputSection {
+    width: 67%;
+    padding: 20px;
+    background-color: lightgray;
+}
+
+.updateButton {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+}

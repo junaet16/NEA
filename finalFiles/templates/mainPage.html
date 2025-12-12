@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mainPageStyle.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</head>
+
+<body class="body">
+
+    <div class="mainContainer">
+
+        <div class="inputSection">
+            <form method="POST">
+
+                <label for="start">Start Station:</label>
+                <select id="start" name="start" style="width: 100%"></select>
+
+                <label for="end">End Station:</label>
+                <select id="end" name="end" style="width: 100%"></select>
+
+                <button type="submit" class="searchButton">Search Route</button>
+            </form>
+        </div>
+
+        <div class="outputSection">
+            <p>PLACEHOLDER</p>
+        </div>
+
+    </div>
+
+    <button class="updateButton"></button>
+
+</body>
+
+<script src="{{ url_for('static', filename='mainPageStyle.js') }}"></script>
+</html>

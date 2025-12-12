@@ -84,6 +84,7 @@ def createAccount(defaultParametersFile, username, password, databaseFile):
 
 
 def login(databaseFile, username, password):
+    message = None
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
 
@@ -92,23 +93,32 @@ def login(databaseFile, username, password):
         FROM Users
         WHERE Username = ?
     """, (username,))
-    result = cursor.fetchall()[0]
-    storedHash, storedSalt = result
 
-    loginHash = createHashPassword(password, storedSalt)
+    try:
+        result = cursor.fetchall()[0]
+        accountFound = True
+    except:
+        accountFound = False
 
-    if loginHash == storedHash:
-        loginSuccessful = True
+    if accountFound:
+        storedHash, storedSalt = result
+        loginHash = createHashPassword(password, storedSalt)
+
+        if loginHash == storedHash:
+            loginSuccessful = True
+            message = "Login Successful"
+        else:
+            loginSuccessful = False
+            message = "Wrong Password"
     else:
-        loginSuccessful = False
-
-    return loginSuccessful
+        message = "Account Not Found"
+    return message
 
 
 def main(username, password, defaultParametersFile, databaseFile):
-    accountCreated = createAccount(defaultParametersFile, username, password, databaseFile)
+    #accountCreated = createAccount(defaultParametersFile, username, password, databaseFile)
     loginSuccessful = login(databaseFile, username, password)
-    print(accountCreated)
+    #print(accountCreated)
     print(loginSuccessful)
 
 
