@@ -3,14 +3,27 @@
     font-family: Arial, sans-serif;
 }
 
+.titleSection {
+    height: 10vh;
+    background-color: #333;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5em;
+    text-align: center;
+}
+
 .mainContainer {
     display: flex;
-    height: 70vh;
+    height: 80vh;
 }
 
 .inputSection {
     width: 30%;
     padding: 20px;
+    background-color: #f4f4f4;
+    overflow-y: auto;
 }
 
 .theForm {
@@ -40,9 +53,46 @@
 }
 
 .outputSection {
+    display: flex;
+    justify-content: space-between;
     width: 70%;
     padding: 20px;
     background-color: lightgray;
+}
+
+.pathContainer {
+    width: 48%;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.path {
+    margin-bottom: 10px;
+}
+
+.path h6 {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: underline;
+    margin-bottom: 5px;
+}
+
+.path ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 0;
+}
+
+.path ul li {
+    padding: 5px 0;
+}
+
+.timeContainer {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #555;
 }
 
 .updateButton {

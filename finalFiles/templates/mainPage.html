@@ -19,6 +19,10 @@
 
 <body class="body">
 
+    <div class="titleSection">
+        <h1>Route Search</h1>
+    </div>
+
     <div class="mainContainer">
 
         <div class="inputSection">
@@ -72,12 +76,49 @@
                     {% endif %}
                 </div>
 
-
             </form>
         </div>
 
         <div class="outputSection">
-            <p>PLACEHOLDER</p>
+            <div class="pathContainer">
+                <h2>Original Fastest Path:</h2>
+                {% if formattedOldPath %}
+                    {% for path in formattedOldPath %}
+                        <div class="path">
+                            <h6 class="lineName">{{ path.LineName }} </h6>
+                            <ul>
+                                {% for station in path.ListOfStationNamesAndDescriptions %}
+                                    <li>{{ station[0] }} - {{ station[2] }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                <div class="timeContainer">
+                    <p>Total Time: {{ oldPathTime }}</p>
+                    <p>Arrival Time: {{ oldPathArrival }}</p>
+                </div>
+            </div>
+
+            <div class="pathContainer">
+                <h2>Our Recomendation:</h2>
+                {% if formattedNewPath %}
+                    {% for path in formattedNewPath %}
+                        <div class="path">
+                            <h6 class="lineName">{{ path.LineName }} </h6>
+                            <ul>
+                                {% for station in path.ListOfStationNamesAndDescriptions %}
+                                    <li>{{ station[0] }} - {{ station[2] }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                <div class="timeContainer">
+                    <p>Total Time: {{ newPathTime }}</p>
+                    <p>Arrival Time: {{ newPathArrival }}</p>
+                </div>
+            </div>
         </div>
 
     </div>
