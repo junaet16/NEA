@@ -68,7 +68,9 @@ def fetchTfLData(databaseFile, TfL_API_KEY):
         lineIDs.append(lineTuple[0])
 
     stationDictionary = fetchStations(TfL_API_KEY, lineIDs)
+    print("Fetched Stations")
     linesDictionary = fetch_lines(stationDictionary, TfL_API_KEY, lineIDs)
+    print("Fetched Lines")
 
     connection.close()
     return stationDictionary, linesDictionary
@@ -109,6 +111,7 @@ def getStationCoordinates(databseFile, StationID):
 
 def SaveTfLData(databaseFile, TfL_API_KEY):
     stationDictionary, linesDictionary = fetchTfLData(databaseFile, TfL_API_KEY)
+    print("TfL Data Fetched")
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
 
@@ -122,6 +125,7 @@ def SaveTfLData(databaseFile, TfL_API_KEY):
             VALUES (?, ?, ?, ?)
             """, (NaPTAN, StationName, Latitude, Longitude))
         connection.commit()
+    print("Stored Stations")
 
     for line in linesDictionary.keys():
         LineID = line
@@ -152,6 +156,7 @@ def SaveTfLData(databaseFile, TfL_API_KEY):
                     INSERT OR REPLACE INTO Connections (StationA, StationB, LineID, BaseTravelTime)
                     VALUES (?, ?, ?, ?)
                     """, (StationB, StationA, LineID, BaseTravelTime))
+    print("Stored connections")
 
     connection.commit()
     connection.close()

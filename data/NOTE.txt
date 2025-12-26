@@ -1,4 +1,4 @@
 *Get AI to come up with good default numbers
 *Add comments to what the default numbers actually mean
-*Do that dropdown table where you can type to get a list of stations to pick from
+*For database error handling - just try except it but when the route is searched for, if the database is not complete, show error message
 *Need to think of a name

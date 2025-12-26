@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/update.css') }}">
+</head>
+<body>
+
+    <div class="mainContainer">
+
+        <div class="updatePageContainer">
+
+            <form method="POST" class="updateForm">
+                <div class="parameterTable">
+                    <table>
+                        <tr>
+                            <td><label for="param1">Time taken to change trains:</label></td>
+                            <td><input type="text" id="param1" name="param1" value="{{ CHANGING_TIME }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param2">Length of effect of event:</label></td>
+                            <td><input type="text" id="param2" name="param2" value="{{ MAX_TIME_WINDOW }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param3">Peak offset before the game (minutes):</label></td>
+                            <td><input type="text" id="param3" name="param3" value="{{ rawArrivalPeakOffset }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param4">Peak offset after the game (minutes):</label></td>
+                            <td><input type="text" id="param4" name="param3" value="{{ rawDeparturePeakOffset }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param5">Match attendance (%):</label></td>
+                            <td><input type="text" id="param5" name="param3" value="{{ ATTENDANCE }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param6">Proportion of people using TfL rail:</label></td>
+                            <td><input type="text" id="param6" name="param3" value="{{ TRAIN_PROPORTION }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param7">Sigma factor for calculating initial crowding:</label></td>
+                            <td><input type="text" id="param7" name="param3" value="{{ SIGMA_FACTOR }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param8">Minimum people needed for effect:</label></td>
+                            <td><input type="text" id="param8" name="param3" value="{{ MINIMUM_PEOPLE }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param9">Delay per person:</label></td>
+                            <td><input type="text" id="param9" name="param3" value="{{ PERSON_DELAY }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param10">People dropped off per hop (%):</label></td>
+                            <td><input type="text" id="param10" name="param3" value="{{ PROPAGATION_FACTOR }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param11">Average walking distance walking time:</label></td>
+                            <td><input type="text" id="param11" name="param3" value="{{ WALKING_TIME }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param12">Average walking speed:</label></td>
+                            <td><input type="text" id="param12" name="param3" value="{{ WALKING_SPEED }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param13">Max crowding factor threshold for normal crowding:</label></td>
+                            <td><input type="text" id="param13" name="param3" value="{{ NORMAL }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param14">Max crowding factor threshold for slight levels of crowding:</label></td>
+                            <td><input type="text" id="param14" name="param3" value="{{ SLIGHTLY }}" required></td>
+                        </tr>
+                        <tr>
+                            <td><label for="param15">Max crowding factor threshold for busy:</label></td>
+                            <td><input type="text" id="param15" name="param3" value="{{ BUSY }}" required></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="buttonSection">
+                    <div class="buttonGroup">
+                        <button type="button" class="actionButton">Button 1</button>
+                        <button type="button" class="actionButton">Button 2</button>
+                        <button type="button" class="actionButton">Button 3</button>
+                        <button type="button" class="actionButton">Button 4</button>
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

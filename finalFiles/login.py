@@ -116,15 +116,15 @@ def login(databaseFile, username, password):
 
 
 def main(username, password, defaultParametersFile, databaseFile):
-    #accountCreated = createAccount(defaultParametersFile, username, password, databaseFile)
+    accountCreated = createAccount(defaultParametersFile, username, password, databaseFile)
     loginSuccessful = login(databaseFile, username, password)
-    #print(accountCreated)
+    print(accountCreated)
     print(loginSuccessful)
 
 
 if __name__ == '__main__':
-    username = "Junaet"
-    password = "hello123"
+    username = "Jun8"
+    password = "h"
     defaultParametersFile = "defaultParameters.json"
-    databaseFile = "final.db"
+    databaseFile = "test.db"
     main(username, password, defaultParametersFile, databaseFile)

@@ -1,0 +1,86 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+    overflow-y: auto;
+}
+
+.mainContainer {
+    width: 100%;
+    max-width: 900px;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+
+.updatePageContainer {
+    width: 100%;
+}
+
+.parameterTable {
+    width: 100%;
+    table-layout: auto;
+    border-collapse: collapse;
+}
+
+.parameterTable tr {
+    width: 100%;
+    border-bottom: 1px solid #ddd;
+}
+
+.parameterTable td:first-child {
+    width: 40%;
+    padding-right: 20px;
+    text-align: left;
+    border-right: 1px solid #ddd;
+    box-sizing: border-box;
+}
+
+.parameterTable td:nth-child(2) {
+    width: 60%;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.parameterTable input {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.buttonSection {
+    margin-top: 20px;
+}
+
+.buttonGroup {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+}
+
+.actionButton {
+    flex: 1;
+    background-color: grey;
+    color: white;
+    border: none;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.actionButton:hover {
+    background-color: darkgrey;
+}

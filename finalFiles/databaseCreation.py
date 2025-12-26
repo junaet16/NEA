@@ -129,13 +129,28 @@ def createLines(databaseFile, jsonFile):
     connection.close()
 
 
-def main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonFile, leaguesjsonFile):
+def getWalking(file):
+    with open(file, "r") as jsonFile:
+        data = json.load(jsonFile)
+    walkingSpeed = data.get("WALKING_SPEED")
+    walkingTime = data.get("WALKING_TIME")
+    return walkingSpeed, walkingTime
+
+
+def main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonFile, leaguesjsonFile, defaultParametersFile):
+    walkingSpeed, walkingTime = getWalking(defaultParametersFile)
+
     createDatabase(databaseFile)
+    print("Created Database")
     createLines(databaseFile, LinesjsonFile)
+    print("Created Lines")
     getTfLData.main(TfL_API_KEY, databaseFile)
-    storeStadiumData.main(OPENCAGE_API_KEY, londonjsonFile, databaseFile, 15, 5)
+    print("Got TFL Data")
+    storeStadiumData.main(OPENCAGE_API_KEY, londonjsonFile, databaseFile, walkingTime, walkingSpeed)
+    print("Stored Stadium Data")
     scraper.main(databaseFile, leaguesjsonFile)
+    print("Done Scraping")
 
 
 if __name__ == '__main__':
-    main("final.db", "lines.json", "0ff5a2076cd640cb957e63d6947efc61", "eb0e2c9b71cc45f7aafe0ae4ecc44cc2", "londonClubs.json", "leagues.json")
+    main("final.db", "lines.json", "0ff5a2076cd640cb957e63d6947efc61", "eb0e2c9b71cc45f7aafe0ae4ecc44cc2", "londonClubs.json", "leagues.json", "defaultParameters.json")

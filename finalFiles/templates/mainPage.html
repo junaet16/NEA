@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Route Search</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='mainPageStyle.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mainPageStyle.css') }}">
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -123,8 +123,9 @@
 
     </div>
 
-    <button class="updateButton">Update</button>
-
-    <script src="{{ url_for('static', filename='mainPageScript.js') }}"></script>
+    <form method="POST">
+        <button type="submit" class="updateButton" name="updateButton">Update</button>
+    </form>
+    <script src="{{ url_for('static', filename='js/mainPageScript.js') }}"></script>
 </body>
 </html>
