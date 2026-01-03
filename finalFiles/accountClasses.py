@@ -1,15 +1,15 @@
 import json
 
-
+#This class is effectively a container for all the parameters being used, unique to each user, for the calculation of the journeys
 class Parameters():
     def __init__(
             self,
-            CHANGING_TIME,
-            MAX_TIME_WINDOW,
-            rawArrivalPeakOffset,
-            rawDeparturePeakOffset,
-            ATTENDANCE,
-            TRAIN_PROPORTION,
+            CHANGING_TIME, #This is the additional take added to each journey
+            MAX_TIME_WINDOW, #This is the maximum time from the peak that if an event falls within it, will be considered in the calculations for crowding
+            rawArrivalPeakOffset, #This is the raw number in minutes of the peak of crowding from the start of a game
+            rawDeparturePeakOffset, #This is the raw number in minutes of the peak of crowding from the end of a game
+            ATTENDANCE, #This is the proportion of the capacity of the stadium that will attend the event (0-1)
+            TRAIN_PROPORTION, #This is the proportion of people that attend the game that will use TfL rain services (0-1)
             SIGMA_FACTOR,
             MINIMUM_PEOPLE,
             PERSON_DELAY,
@@ -43,14 +43,16 @@ class Parameters():
         self.arrivalMinutesOffset = None
         self.departureMinutesOffset = None
 
+    # When I was initially writing the program, window minutes for both arrival and departure were entered differently, so the program is written with the assumpton that they can be different, when in reality they are the same, so here both the arrival and departure window minutes are set to the same max time window that is passed in
     def calculateWindow(self):
         self.arrivalWindowMinutes = self.MAX_TIME_WINDOW
         self.departureWindowMinutes = self.MAX_TIME_WINDOW
 
+    #Sets the
     def calculatePeakOffset(self):
         import datetime
-        self.arrivalPeakOffset = datetime.timedelta(minutes=15)
-        self.departurePeakOffset = datetime.timedelta(minutes=15)
+        self.arrivalPeakOffset = datetime.timedelta(self.rawArrivalPeakOffset)
+        self.departurePeakOffset = datetime.timedelta(self.rawDeparturePeakOffset)
 
     def calculateMinutesOffset(self):
         self.arrivalMinutesOffset = self.arrivalPeakOffset.total_seconds() / 60
