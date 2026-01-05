@@ -28,7 +28,6 @@ class Severity():
 
 
     def getDescription(self, factor):
-        description = ""
         if factor > self.busy:
             description = "Severe"
         elif factor > self.slightly:

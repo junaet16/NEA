@@ -300,7 +300,6 @@ def processAffectedConnections(network):
     connectionObjects = network.edges
     for edgeReference in connectionObjects.keys():
         edge = connectionObjects[edgeReference]
-        connectionDelayFactor = 1
         StationA = edge.StationA
         StationB = edge.StationB
         LineID = edge.LineID

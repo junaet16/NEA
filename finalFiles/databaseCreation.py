@@ -142,15 +142,29 @@ def main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonF
 
     createDatabase(databaseFile)
     print("Created Database")
+
     createLines(databaseFile, LinesjsonFile)
     print("Created Lines")
-    getTfLData.main(TfL_API_KEY, databaseFile)
+
+    tflDone = getTfLData.main(TfL_API_KEY, databaseFile)
+    if type(tflDone) == int: #When an error has occurred a status code will be returned
+        return tflDone
+        pass
     print("Got TFL Data")
-    storeStadiumData.main(OPENCAGE_API_KEY, londonjsonFile, databaseFile, walkingTime, walkingSpeed)
+
+    geocodingMessage = storeStadiumData.main(OPENCAGE_API_KEY, londonjsonFile, databaseFile, walkingTime, walkingSpeed)
+    if type(geocodingMessage) != bool:
+        return geocodingMessage
     print("Stored Stadium Data")
-    scraper.main(databaseFile, leaguesjsonFile)
+
+    scraperMessage = scraper.main(databaseFile, leaguesjsonFile)
+    if type(scraperMessage) is int:
+        return scraperMessage
     print("Done Scraping")
+
+    return "success"
 
 
 if __name__ == '__main__':
-    main("final.db", "lines.json", "0ff5a2076cd640cb957e63d6947efc61", "eb0e2c9b71cc45f7aafe0ae4ecc44cc2", "londonClubs.json", "leagues.json", "defaultParameters.json")
+    message = main("final.db", "lines.json", "0ff5a2076cd640cb957e63d6947efc61", "eb0e2c9b71cc45f7aafe0ae4ecc44cc2", "londonClubs.json", "leagues.json", "defaultParameters.json")
+    print(message)

@@ -43,6 +43,8 @@ def getDate(monthYear, restOfDate):
 
 def getPageFixtures(url, monthYear, tierName, fixtures):
     response = safeGet(url)
+    if type(response) is int:
+        return response
     soup = bs4.BeautifulSoup(response.text, "html.parser")
 
     #Check if there is a link to today's fixtures
@@ -104,6 +106,8 @@ def main(databaseFile, leaguesFile):
         for dateAddition in dateAdditions:
             url = f"https://www.bbc.co.uk/sport/football/{tierID}/scores-fixtures/{dateAddition}?filter=fixtures"
             fixtures = getPageFixtures(url, dateAddition, tierName, fixtures)
+            if type(fixtures) is int: #Catch errors
+                return fixtures
 
     #Stores everything into classes so that methods may be applied
     dateObjectList = []
@@ -123,6 +127,9 @@ def main(databaseFile, leaguesFile):
     AllDatesObject.findRelevantDates(databaseFile)
     AllDatesObject.storeInDatabase(databaseFile)
 
+    return True
+
 
 if __name__ == '__main__':
-    main("final.db", "leagues.json")
+    message = main("final.db", "leagues.json")
+    print(message)

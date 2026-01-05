@@ -14,6 +14,8 @@ def fetchStations(TfL_API_KEY, lineIDs):
     for line in lineIDs:
         url = f"https://api.tfl.gov.uk/Line/{line}/Route/Sequence/inbound"
         response = safeGet(url, params=params)
+        if type(response) is int: #Checks if there has been an error
+            return response
         data = response.json()
         stations = data["stations"]
         for station in stations:
@@ -37,6 +39,8 @@ def fetch_lines(stationDictionary, TfL_API_KEY, lineIDs):
     for line in lineIDs:
         url = f"https://api.tfl.gov.uk/Line/{line}/Route/Sequence/inbound"
         response = safeGet(url, params=params)
+        if type(response) is int: #Checks if there has been an error
+            return response
         data = response.json()
         branches = data["orderedLineRoutes"]
         listOflistsOfNAPTAN = []
@@ -69,6 +73,7 @@ def fetchTfLData(databaseFile, TfL_API_KEY):
 
     stationDictionary = fetchStations(TfL_API_KEY, lineIDs)
     print("Fetched Stations")
+
     linesDictionary = fetch_lines(stationDictionary, TfL_API_KEY, lineIDs)
     print("Fetched Lines")
 
@@ -111,6 +116,11 @@ def getStationCoordinates(databseFile, StationID):
 
 def SaveTfLData(databaseFile, TfL_API_KEY):
     stationDictionary, linesDictionary = fetchTfLData(databaseFile, TfL_API_KEY)
+
+    if type(stationDictionary) is int or type(linesDictionary) is int:
+        print(f"A {stationDictionary} error has occurred")
+        return stationDictionary
+
     print("TfL Data Fetched")
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -163,9 +173,15 @@ def SaveTfLData(databaseFile, TfL_API_KEY):
 
     getStationLineRelationships(databaseFile)
 
+    return True
+
 
 def main(TFL_API_KEY, databaseFile):
-    SaveTfLData(databaseFile, TFL_API_KEY)
+    code = SaveTfLData(databaseFile, TFL_API_KEY)
+    if type(code) is int:
+        print(f"A {code} error has occurred")
+        return code
+    return True
 
 
 

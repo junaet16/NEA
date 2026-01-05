@@ -2,6 +2,8 @@
 *Add comments to what the default numbers actually mean
 *For database error handling - just try except it but when the route is searched for, if the database is not complete, show error message
 *Need to think of a name
+*Maybe add a base travel time for each connection (how long they stay at a station)
+*For the walking stuff, when updating, it has to be done speratetly again
 
 *Do comments for:
 loading.css
@@ -14,19 +16,14 @@ loading.html
 login.html
 mainPage.html
 updatePage.html
-accountClasses.py
-classes.py
-crowdingAlgorithm.py
+
+
 customFunctions.py
 databaseCreation.py
-getResults.py
 getTfLData.py
-login.py
 main.py
-networkClasses.py
-pathFinding.py
 scraper.py
+transportClasses.py
 scraperClass.py
 storeStadiumData.py
-transportClasses.py
 websiteDataClasses.py

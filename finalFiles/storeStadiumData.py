@@ -88,8 +88,13 @@ def getStadiumData(londonClubsFile, databaseFile, key, walkingDistance):
 
     for club, data in londonClubs.items():
         stadiumName, capacity = data
-        coordinates = getCoordinates(key, stadiumName)
+        try:
+            coordinates = getCoordinates(key, stadiumName)
+        except:
+            return "Opencage Geocoder API"
         insertData(databaseFile, club, stadiumName, capacity, coordinates, walkingDistance)
+
+    return True
 
 
 def calculateWalkingDistance(walkingTime, walkingSpeed):
@@ -99,7 +104,9 @@ def calculateWalkingDistance(walkingTime, walkingSpeed):
 
 def main(key, londonClubsFile, databaseFile, walkingTime, walkingSpeed):
     walkingDistance = calculateWalkingDistance(walkingTime, walkingSpeed)
-    getStadiumData(londonClubsFile, databaseFile, key, walkingDistance)
+    done = getStadiumData(londonClubsFile, databaseFile, key, walkingDistance)
+    print(done)
+    return done
 
 
 if __name__ == '__main__':

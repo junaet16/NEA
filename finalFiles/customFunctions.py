@@ -25,6 +25,11 @@ def safeGet(url, params=None):
         except:
             pass
 
+    try:
+        return response.status_code
+    except:
+        return 0 #This occurs if there is no internet
+
 
 #Creates a parameter object to store the parameters used for calculation
 def getParameters(username, databaseFile):

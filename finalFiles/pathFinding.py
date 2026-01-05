@@ -3,18 +3,15 @@ import collections
 import math
 import heapq
 
-
+#Fetches all the unique connections from the database and for every StationA, it adds to a list all StationBs in their own list including Line and travel time
+#Forms dictionary in the form {StationA : [[StationB, BaseTravelTime, LineID], [StationC, ...], ...]}
 def MakeGraph(databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
-    crowdingNumber = 0
-    crowdingScore = 0
     listOfNeighbourStations = {} #Just to gather unique [StationA, StationB, LineID]
-    listOfNeighbourData = {} #Actual node to be used
     rows = cursor.execute("SELECT StationA, StationB, LineID, BaseTravelTime FROM connections").fetchall()
 
     for StationA, StationB, LineID, BaseTravelTime in rows: #For every unique connection (direction matters)
-        totalTime = BaseTravelTime
         if StationA not in listOfNeighbourStations:
             listOfNeighbourStations[StationA] = []
         if [StationB, BaseTravelTime, LineID] not in listOfNeighbourStations[StationA]:
@@ -40,7 +37,7 @@ def Dijkstra(graph, startStation, goalStation, CHANGING_TIME, penalty=True):
     while frontier: #This condition means it runs until all the paths have been explored - till the last one
         currentCost, (currentStation, currentLine) = heapq.heappop(frontier) #Deletes the next route at the top so that the next one to be explored can be at the top
 
-        # Skip if already fully explored this (station, line) - If at the top of the heap, then it means that it is the shortest ever path to the station
+        # Skip if already fully explored this (station, line) - If at the top of the heap, then it means that it is the shortest ever path to the station, which means it is visited
         if (currentStation, currentLine) in visited:
             continue
         visited.add((currentStation, currentLine))
@@ -54,8 +51,10 @@ def Dijkstra(graph, startStation, goalStation, CHANGING_TIME, penalty=True):
         for nextStation, baseTravelTime, nextLine in graph[currentStation]:
             travelTime = baseTravelTime
 
-            if penalty: #Can be turned off if needed
+            if penalty: #Can be turned off if needed (for testing purposes)
                 if currentLine is not None and currentLine != nextLine:
+                #Initially no line is chosen, so the penalty is not added for changing lines
+                #If the line is switched to travel to the next station, the penalty is added to the cost
                     travelTime += CHANGING_TIME
 
             # New total time to reach the neighbour

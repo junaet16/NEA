@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 
 class TransportClass(ABC):
     def __init__(self):
-        self.currentPassengerLoad = 0
-        self.DelayFactor = 1
+        self.currentPassengerLoad = 0 #initially set to 0 and is the extra number of people present due to the events
+        self.DelayFactor = 1 # initially set to 1 and is the factor by which the time to travel would be multiplied by to simulate crowding
 
     @abstractmethod
     def IsAffected(self):
@@ -63,6 +63,7 @@ class CreationStation(Station):
         pass
 
 
+#Serves as the parent class of the affected and not affected dijkstra station classes
 class DijkstraStation(Station):
     def __init__(self, NaPTAN, StationName):
         super().__init__(NaPTAN, StationName)
@@ -105,7 +106,7 @@ class Connection(TransportClass):
         self.StationA = StationA
         self.StationB = StationB
         self.LineID = LineID
-        self.connectionReference = (self.StationA, self.StationB, self.LineID)
+        self.connectionReference = (self.StationA, self.StationB, self.LineID) #Unique identifier
         self.BaseTravelTime = BaseTravelTime
         self.LineDelay = 0
 
@@ -125,7 +126,7 @@ class NotAffectedConnection(Connection):
     def IsAffected(self):
         return False
 
-    def returnDelay(self):
+    def returnDelay(self): #Because it isn't affected
         self.DelayFactor = 1
         return 1
 
@@ -148,6 +149,6 @@ class AffectedConnection(Connection):
 
 class Network():
     def __init__(self):
-        self.nodes = {}
-        self.edges = {}
+        self.nodes = {} #Dictionary of station objects with the key being the NaPTAN
+        self.edges = {} #Dictionary of connection objects with the key being (StationA, StationB, LineID)
         self.SpreadOutEdges = {}

@@ -45,6 +45,9 @@ def loginPage():
         threading.Thread(target=createDatabase).start()
         return redirect(url_for("loadPage"))
 
+    with open(flagsFile, "w") as flag_file:
+        pass #Wipe
+
     if request.method == 'POST':
         action = request.form.get('actionName')
         username = request.form.get('username')
@@ -202,6 +205,22 @@ def updatePage():
                            BUSY=BUSY)
 
 
+@app.route("/db_error")
+def databaseError():
+    flagsFile = app.config["FLAGS_FILE"]
+    errorMessage = "Unknown error"
+
+    try:
+        with open(flagsFile, "r") as f:
+            data = json.load(f)
+            if "error" in data and data["error"]:
+                errorMessage = data["error"]
+    except:
+        pass
+
+    return render_template("databaseError.html", errorMessage=errorMessage)
+
+
 def createDatabase():
     databaseFile = app.config["DATABASE_FILE"]
     LinesjsonFile = app.config["LINES_JSON_FILE"]
@@ -212,10 +231,22 @@ def createDatabase():
     flagsFile = app.config["FLAGS_FILE"]
     defaultParametersFile = app.config["DEFAULT_PARAMETERS_FILE"]
 
-    databaseCreation.main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonFile, leaguesjsonFile, defaultParametersFile)
+    message = databaseCreation.main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonFile, leaguesjsonFile, defaultParametersFile)
+
+    if message == "success":
+        status = "success"
+    else:
+        status = "failed"
+        databaseFile = Path(app.config["DATABASE_FILE"])
+        if databaseFile.exists():
+            databaseFile.unlink()
+    data = {
+        "status": status,
+        "error": message
+    }
 
     with open(flagsFile, "w") as file:
-        json.dump({"databaseCreated": True}, file)
+        json.dump(data, file)
 
     print("Database created")
 
@@ -306,20 +337,20 @@ def getLines(stationName, databaseFile):
 @app.route('/check_flag', methods=['GET'])
 def checkFlag():
     flagsFile = app.config["FLAGS_FILE"]
-    try:
-        with open(flagsFile, "r") as flag_file:
-            flags = json.load(flag_file)
-            flag = flags.get("databaseCreated")
-    except:
-        flag = False
 
-    with open(flagsFile, "w") as flag_file:
-        pass #Wipe
-
-    return jsonify({
-        "databaseCreated": flag,
+    response = {
+        "status": "creating",
+        "error": None,
         "previousPage": session.get("previousPage")
-    })
+    }
+
+    try:
+        with open(flagsFile, "r") as file:
+            response.update(json.load(file))
+    except:
+        pass
+
+    return jsonify(response)
 
 
 @app.route("/get_stations")
@@ -351,7 +382,7 @@ def get_stations():
 
 
 if __name__ == '__main__':
-    databaseFile = "data/te st.db"
+    databaseFile = "data/te   st.db"
     LinesjsonFile = "lines.json"
     TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
     OPENCAGE_API_KEY = "eb0e2c9b71cc45f7aafe0ae4ecc44cc2"

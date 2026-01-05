@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Database Setup Failed</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dbError.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Database Setup Failed</h1>
+
+        <p class="error-message" id="error">{{ error_message }}</p>
+
+        <form id="retryForm">
+            <button type="submit" class="retry-button">Retry</button>
+        </form>
+
+        <p class="info-message" id="message"></p>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dbError.js') }}"></script>
+</body>
+</html>
