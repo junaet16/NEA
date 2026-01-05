@@ -24,6 +24,9 @@ class Severity():
             WHERE Username = ?
             """, (self.username,))
         results = cursor.fetchall()[0]
+
+        connection.close()
+
         self.normal, self.slightly, self.busy = results
 
 

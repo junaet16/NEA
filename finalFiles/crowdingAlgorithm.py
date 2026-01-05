@@ -216,8 +216,8 @@ def getParameters(username, databaseFile):
 
 #Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries
 def createNetwork(baseGraph, databaseFile, stations, connections, network):
-    connection = sqlite3.connect(databaseFile)
-    cursor = connection.cursor()
+    sqlConnection = sqlite3.connect(databaseFile)
+    cursor = sqlConnection.cursor()
 
     for StationA in baseGraph.keys():
         cursor.execute("""
@@ -240,6 +240,8 @@ def createNetwork(baseGraph, databaseFile, stations, connections, network):
             baseConnectionClass = classes.NotAffectedConnection(StationA, StationB, LineID, BaseTravelTime)
             key = (StationA, StationB, LineID)
             connections[key] = baseConnectionClass
+
+    sqlConnection.close()
 
     network.nodes = stations
     network.edges = connections

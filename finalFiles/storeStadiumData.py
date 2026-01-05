@@ -109,6 +109,38 @@ def main(key, londonClubsFile, databaseFile, walkingTime, walkingSpeed):
     return done
 
 
+def redoStore(walkingTime, walkingSpeed, londonClubsFile, databaseFile):
+    walkingDistance = calculateWalkingDistance(walkingTime, walkingSpeed)
+
+    with open(londonClubsFile, "r") as file:
+        londonClubs = json.load(file)
+
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM VenueStationRelationships")
+    connection.commit()
+    connection.close()
+
+    for club, data in londonClubs.items():
+        stadiumName, capacity = data
+
+        connection = sqlite3.connect(databaseFile)
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT Latitude, Longitude
+            FROM Venues
+            WHERE VenueName = ?
+            """, (stadiumName, ))
+
+        coordinates = {}
+        coordinates["lat"], coordinates["lng"] = cursor.fetchall()[0]
+
+        insertData(databaseFile, club, stadiumName, capacity, coordinates, walkingDistance)
+
+        connection.close()
+
+
 if __name__ == '__main__':
     key = "eb0e2c9b71cc45f7aafe0ae4ecc44cc2"
     londonClubsFile = "londonClubs.json"

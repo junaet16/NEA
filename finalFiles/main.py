@@ -8,6 +8,7 @@ from pathlib import Path
 import databaseCreation
 import threading
 import json
+import storeStadiumData
 
 
 app = Flask(__name__)
@@ -208,17 +209,12 @@ def updatePage():
 @app.route("/db_error")
 def databaseError():
     flagsFile = app.config["FLAGS_FILE"]
-    errorMessage = "Unknown error"
 
-    try:
-        with open(flagsFile, "r") as f:
-            data = json.load(f)
-            if "error" in data and data["error"]:
-                errorMessage = data["error"]
-    except:
-        pass
+    with open(flagsFile, "r") as f:
+        data = json.load(f)
+        errorMessage = data["error"]
 
-    return render_template("databaseError.html", errorMessage=errorMessage)
+    return render_template("databaseError.html") #Can pass in an error message in the future
 
 
 def createDatabase():
@@ -334,6 +330,143 @@ def getLines(stationName, databaseFile):
     return returnList
 
 
+def backgroundDataFetch():
+    databaseFile = app.config["DATABASE_FILE"]
+
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM Users")
+    users_data = cursor.fetchall()  # List of tuples with all user rows
+    connection.close()
+
+    databasePath = Path(databaseFile)
+    databasePath.unlink()
+
+    createDatabase()
+
+    if users_data:
+        connection = sqlite3.connect(databaseFile)
+        cursor = connection.cursor()
+        cursor.executemany("""
+                INSERT OR REPLACE INTO Users (
+                    Username, 
+                    PasswordHash,
+                    Salt, 
+                    CHANGING_TIME, 
+                    MAX_TIME_WINDOW, 
+                    rawArrivalPeakOffset, 
+                    rawDeparturePeakOffset,
+                    ATTENDANCE, 
+                    TRAIN_PROPORTION, 
+                    SIGMA_FACTOR, 
+                    MINIMUM_PEOPLE, 
+                    PERSON_DELAY,
+                    PROPAGATION_FACTOR, 
+                    WALKING_TIME, 
+                    WALKING_SPEED, 
+                    NORMAL, 
+                    SLIGHTLY, 
+                    BUSY
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, users_data)
+        connection.commit()
+        connection.close()
+
+
+@app.route("/fetch_new_data", methods=["POST"])
+def fetchNewData():
+    threading.Thread(target=backgroundDataFetch).start()
+    return redirect(url_for("loadPage"))
+
+
+@app.route("/save_parameters", methods=["POST"])
+def saveParameters():
+    databaseFile = app.config["DATABASE_FILE"]
+    londonjsonFile = app.config["LONDONJSON_FILE"]
+
+    username = session.get("username")
+    data = request.get_json()
+
+    values = (
+        float(data["CHANGING_TIME"]),
+        float(data["MAX_TIME_WINDOW"]),
+        float(data["rawArrivalPeakOffset"]),
+        float(data["rawDeparturePeakOffset"]),
+        float(data["ATTENDANCE"]),
+        float(data["TRAIN_PROPORTION"]),
+        float(data["SIGMA_FACTOR"]),
+        float(data["MINIMUM_PEOPLE"]),
+        float(data["PERSON_DELAY"]),
+        float(data["PROPAGATION_FACTOR"]),
+        float(data["WALKING_TIME"]),
+        float(data["WALKING_SPEED"]),
+        float(data["NORMAL"]),
+        float(data["SLIGHTLY"]),
+        float(data["BUSY"]),
+        username  # WHERE clause
+    )
+
+    connection = sqlite3.connect(databaseFile)
+    cursor = connection.cursor()
+    cursor.execute("""
+        UPDATE Users SET
+            CHANGING_TIME = ?,
+            MAX_TIME_WINDOW = ?,
+            rawArrivalPeakOffset = ?,
+            rawDeparturePeakOffset = ?,
+            ATTENDANCE = ?,
+            TRAIN_PROPORTION = ?,
+            SIGMA_FACTOR = ?,
+            MINIMUM_PEOPLE = ?,
+            PERSON_DELAY = ?,
+            PROPAGATION_FACTOR = ?,
+            WALKING_TIME = ?,
+            WALKING_SPEED = ?,
+            NORMAL = ?,
+            SLIGHTLY = ?,
+            BUSY = ?
+        WHERE Username = ?
+        """, values)
+    connection.commit()
+    connection.close()
+
+    walkingTime = float(data["WALKING_TIME"])
+    walkingSpeed = float(data["WALKING_SPEED"])
+
+    storeStadiumData.redoStore(walkingTime, walkingSpeed, londonjsonFile, databaseFile)
+
+    return jsonify({"success": True})
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.pop("username", None)  # Remove username from session
+    return redirect(url_for("loginPage"))
+
+
+@app.route("/load_default_parameters", methods=["GET"])
+def loadDefaultParameters():
+    defaultParametersFile = app.config["DEFAULT_PARAMETERS_FILE"]
+
+    with open(defaultParametersFile, "r") as file:
+        data = json.load(file)
+    return jsonify(data)
+
+
+@app.route("/updateFlags", methods=["POST"])
+def updateFlags():
+    flagsFile = app.config["FLAGS_FILE"]
+
+    data = {
+        "status": "creating",
+        "error": "success"
+    }
+
+    with open(flagsFile, "w") as file:
+        json.dump(data, file)
+    return jsonify({"success": True})
+
+
 @app.route('/check_flag', methods=['GET'])
 def checkFlag():
     flagsFile = app.config["FLAGS_FILE"]
@@ -382,7 +515,7 @@ def get_stations():
 
 
 if __name__ == '__main__':
-    databaseFile = "data/te   st.db"
+    databaseFile = "data/te st.db"
     LinesjsonFile = "lines.json"
     TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
     OPENCAGE_API_KEY = "eb0e2c9b71cc45f7aafe0ae4ecc44cc2"

@@ -110,6 +110,7 @@ def login(databaseFile, username, password):
     else:
         message = "Account Not Found"
 
+    connection.close()
     return message
 
 

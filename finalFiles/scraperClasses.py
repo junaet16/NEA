@@ -53,6 +53,8 @@ class AllDates():
                 relevantDates.append(dateObject) #This means at least one event on this date is in London
         self.dates = relevantDates
 
+        connection.close()
+
     def storeInDatabase(self, databaseFile):
         connection = sqlite3.connect(databaseFile)
         cursor = connection.cursor()

@@ -9,13 +9,11 @@
     <div class="container">
         <h1>Database Setup Failed</h1>
 
-        <p class="error-message" id="error">{{ error_message }}</p>
+        <p class="error-message" id="error">{{ errorMessage }}</p>
 
         <form id="retryForm">
             <button type="submit" class="retry-button">Retry</button>
         </form>
-
-        <p class="info-message" id="message"></p>
     </div>
 
     <script src="{{ url_for('static', filename='js/dbError.js') }}"></script>

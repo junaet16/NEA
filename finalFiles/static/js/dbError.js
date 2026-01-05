@@ -1,11 +1,9 @@
-document.getElementById("retryForm").addEventListener("submit", function(event) {
-    event.preventDefault(); // Prevent immediate form submission
+document.getElementById("retryForm").addEventListener("submit", async function (event) {
+    event.preventDefault();
 
-    const messageEl = document.getElementById("message");
-    messageEl.innerText = "Redirecting to login page in 3 seconds";
+    await fetch("/updateFlags", {
+        method: "POST"
+    });
 
-    setTimeout(() => {
-        // Navigate to the login page
-        window.location.href = "/";
-    }, 3000); // 3 seconds
+    window.location.href = "/";
 });

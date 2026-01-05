@@ -15,6 +15,9 @@ def getNaPTAN(name, database):
         FROM Stations
         WHERE StationName = ?""", (name,))
     result = cursor.fetchall()[0][0]
+
+    connection.close()
+
     return result
 
 
