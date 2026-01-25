@@ -1,14 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Character encoding to support standard text rendering -->
     <meta charset="UTF-8">
+
+    <!-- Title displayed in the browser tab -->
     <title>Loading</title>
+
+    <!-- CSS file for styling the loading screen -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/loading.css') }}">
+
+    <!-- JavaScript file controlling loading behaviour (e.g. polling, redirects) -->
     <script src="{{ url_for('static', filename='js/loadingScript.js') }}"></script>
 </head>
+
 <body>
+    <!-- Container for the loading screen content -->
     <div class="loadingContainer">
+
+        <!-- Text displayed while the application is loading -->
         <div class="loadingText">Loading...</div>
+
     </div>
 </body>
 </html>

@@ -30,6 +30,7 @@ def getNextTwelveMonths():
 #To get the actual numerical date of the month from the string fetched because it is originally in a form like "Saturday 12th December"
 def getDate(monthYear, restOfDate):
     try:
+        # Extract the day number from the string
         dayNumber = re.search(r"\d{1,2}", restOfDate).group()
         if len(dayNumber) == 1:
             dayNumber = "0" + dayNumber
@@ -37,22 +38,25 @@ def getDate(monthYear, restOfDate):
         date = f"{dayNumber}-{month}-{year}"
         return date
     except:
-        #Not a date
+        # Returned when the text does not represent a valid date
         return "Error"
 
 
+# Fetches and parses fixtures from a BBC Sport fixtures page
 def getPageFixtures(url, monthYear, tierName, fixtures):
     response = safeGet(url)
     if type(response) is int:
         return response
     soup = bs4.BeautifulSoup(response.text, "html.parser")
 
-    #Check if there is a link to today's fixtures
+    # Check if the page contains a link to today's fixtures
+    # If so, ensure today's date exists in the fixtures dictionary
+    # This is because they are represented slighly differently in the page (no date, just the word "today")
     today_link = soup.find("a", id="today")
     if today_link:
         currentDate = datetime.datetime.now().strftime("%d-%m-%Y")  #Today's date in dd-mm-yyyy format
         try:
-            test = fixtures[currentDate]
+            test = fixtures[currentDate] #Basically to check if it exists
         except:
             fixtures[currentDate] = []
 
@@ -84,6 +88,7 @@ def getPageFixtures(url, monthYear, tierName, fixtures):
                 else:
                     away, time = away_time, "TBC"
 
+                # Store fixture data for me
                 fixtures[currentDate].append({
                     "league" : tierName,
                     "home": home,
@@ -94,8 +99,11 @@ def getPageFixtures(url, monthYear, tierName, fixtures):
     return fixtures
 
 
+# Main function for scraping fixtures and storing them in the database
 def main(databaseFile, leaguesFile):
     fixtures = {}
+
+    # Load league tiers and their BBC identifiers
     with open(leaguesFile, "r") as leaguesFileObject:
         tiers = json.load(leaguesFileObject)
     dateAdditions = getNextTwelveMonths()
@@ -106,10 +114,13 @@ def main(databaseFile, leaguesFile):
         for dateAddition in dateAdditions:
             url = f"https://www.bbc.co.uk/sport/football/{tierID}/scores-fixtures/{dateAddition}?filter=fixtures"
             fixtures = getPageFixtures(url, dateAddition, tierName, fixtures)
-            if type(fixtures) is int: #Catch errors
+
+            # Catch errors returned by safeGet
+            if type(fixtures) is int:
                 return fixtures
 
-    #Stores everything into classes so that methods may be applied
+    # Convert raw fixture dictionaries into class objects
+    # This allows filtering and database storage using class methods
     dateObjectList = []
     for dateString in fixtures.keys():
         listOfFixtureObjects = []
@@ -118,12 +129,17 @@ def main(databaseFile, leaguesFile):
             home = fixtureDictionary["home"]
             away = fixtureDictionary["away"]
             time = fixtureDictionary["time"]
+
             fixtureObject = classes.Fixture(league, home, away, time)
             listOfFixtureObjects.append(fixtureObject)
+
         dateObject = classes.Date(dateString, listOfFixtureObjects)
         dateObjectList.append(dateObject)
+
+    # AllDates object contains all Date objects and applies filtering logic
     AllDatesObject = classes.AllDates(dateObjectList)
 
+    # Remove non-London fixtures using the Teams table
     AllDatesObject.findRelevantDates(databaseFile)
     AllDatesObject.storeInDatabase(databaseFile)
 

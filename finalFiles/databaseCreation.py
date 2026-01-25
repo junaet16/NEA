@@ -5,7 +5,8 @@ import storeStadiumData
 import scraper
 
 
-#Creates the database
+# Creates the SQLite database and all required tables
+# If tables already exist, they will not be recreated
 def createDatabase(databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -106,19 +107,17 @@ def createDatabase(databaseFile):
     connection.close()
 
 
-#Puts all the data regarding each line into the database
+#Puts all the data for me regarding each line into the database
 #Line speeds are in kmh^-1
-#Source:
-#https://tfl.gov.uk/corporate/transparency/freedom-of-information/foi-request-detail?referenceId=FOI-0228-1819 - Underground & Overground
-#https://www.independent.co.uk/travel/news-and-advice/london-dlr-trains-speed-restrictions-b2613480.html - DLR
-#https://tfl.gov.uk/corporate/transparency/freedom-of-information/foi-request-detail?referenceId=FOI-1394-2223 - Elizabeth Line
 def createLines(databaseFile, jsonFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
 
+    # Load line information from JSON file
     with open(jsonFile, "r") as file:
         LineInfo = json.load(file)
 
+    # Insert or update each line in the Lines table
     for lineID, (LineName, AverageSpeed) in LineInfo.items():
         cursor.execute("""
             INSERT OR REPLACE INTO Lines (LineID, LineName, AverageSpeed)
@@ -129,34 +128,45 @@ def createLines(databaseFile, jsonFile):
     connection.close()
 
 
+# Reads default walking parameters from a JSON configuration file
 def getWalking(file):
     with open(file, "r") as jsonFile:
         data = json.load(jsonFile)
+
+    # Extract walking speed and walking time parameters
     walkingSpeed = data.get("WALKING_SPEED")
     walkingTime = data.get("WALKING_TIME")
     return walkingSpeed, walkingTime
 
 
+#Main sequence of steps for building and populating the database
 def main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonFile, leaguesjsonFile, defaultParametersFile):
+
+    # Load walking parameters used for venue station relationships
     walkingSpeed, walkingTime = getWalking(defaultParametersFile)
 
+    # Create database schema
     createDatabase(databaseFile)
     print("Created Database")
 
+    # Populate Lines table
     createLines(databaseFile, LinesjsonFile)
     print("Created Lines")
 
+    # Fetch and store TfL transport data for me
     tflDone = getTfLData.main(TfL_API_KEY, databaseFile)
     if type(tflDone) == int: #When an error has occurred a status code will be returned
         return tflDone
         pass
     print("Got TFL Data")
 
+    # Geocode stadiums and link them to stations with default walking parameters
     geocodingMessage = storeStadiumData.main(OPENCAGE_API_KEY, londonjsonFile, databaseFile, walkingTime, walkingSpeed)
     if type(geocodingMessage) != bool:
         return geocodingMessage
     print("Stored Stadium Data")
 
+    #Scrape event data for me
     scraperMessage = scraper.main(databaseFile, leaguesjsonFile)
     if type(scraperMessage) is int:
         return scraperMessage
@@ -165,6 +175,7 @@ def main(databaseFile, LinesjsonFile, TfL_API_KEY, OPENCAGE_API_KEY, londonjsonF
     return "success"
 
 
+# Run main (remnant of testing)
 if __name__ == '__main__':
     message = main("final.db", "lines.json", "0ff5a2076cd640cb957e63d6947efc61", "eb0e2c9b71cc45f7aafe0ae4ecc44cc2", "londonClubs.json", "leagues.json", "defaultParameters.json")
     print(message)

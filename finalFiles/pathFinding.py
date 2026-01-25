@@ -8,7 +8,7 @@ import heapq
 def MakeGraph(databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
-    listOfNeighbourStations = {} #Just to gather unique [StationA, StationB, LineID]
+    listOfNeighbourStations = {} # {StationA: [[StationB, BaseTravelTime, LineID], ...]}
     rows = cursor.execute("SELECT StationA, StationB, LineID, BaseTravelTime FROM connections").fetchall()
 
     for StationA, StationB, LineID, BaseTravelTime in rows: #For every unique connection (direction matters)
@@ -21,13 +21,15 @@ def MakeGraph(databaseFile):
     return listOfNeighbourStations
 
 
+# It is assumed that all stations can be accessed from any other station because the graph is made from the data for me stored in the database which is always complete for the function to be called in the first place
+#On the TfL network, every station is eventually connected to every other station
 def Dijkstra(graph, startStation, goalStation, CHANGING_TIME, penalty=True):
     distances = collections.defaultdict(lambda: math.inf) #Best known time to each station
     cameFrom = {} #To reconstruct path later
     visited = set() #Stores visited stations
 
     # Start at the given station, with no line yet chosen
-    startState = (startStation, None)
+    startState = (startStation, None) # This is the state is key because the line change penalty depends on the previous line
     distances[startState] = 0
 
     frontier = [(0, startState)] #The first item is always the cheapest station to go to next

@@ -1,12 +1,17 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     /* Load Default Values*/
+
+    // Select the "Load Default Values" button
     const loadDefaultBtn = document.querySelector('button[name="loadDefault"]');
     if (loadDefaultBtn) {
         loadDefaultBtn.addEventListener("click", async () => {
+
+            // Fetch default parameter values from the backend
             const response = await fetch("/load_default_parameters");
             const data = await response.json();
 
+            // Populate all parameter input fields with default values
             document.getElementById("param1").value = data.CHANGING_TIME;
             document.getElementById("param2").value = data.MAX_TIME_WINDOW;
             document.getElementById("param3").value = data.rawArrivalPeakOffset;
@@ -27,10 +32,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* Save Parameters */
+
+    // Select the "Save" button
     const saveBtn = document.querySelector('button[name="save"]');
     if (saveBtn) {
         saveBtn.addEventListener("click", async () => {
 
+            // Collect all parameter values into a payload object
             const payload = {
                 CHANGING_TIME: document.getElementById("param1").value,
                 MAX_TIME_WINDOW: document.getElementById("param2").value,
@@ -49,6 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 BUSY: document.getElementById("param15").value
             };
 
+            // Send updated parameters to the backend as JSON
             fetch("/save_parameters", {
                 method: "POST",
                 headers: {
@@ -57,28 +66,42 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(payload)
             });
 
+            // Redirect back to the main page after saving
             window.location.href = "/main"
         });
     }
 
 
+    /* Log Out Button */
+
+    // Select the "Log Out" button
     const logoutBtn = document.querySelector('button[name="logOut"]');
     if (logoutBtn) {
         logoutBtn.addEventListener("click", async () => {
+            // Notify backend to clear user session
             await fetch("/logout", {
                 method: "POST"
             });
+
+            // Redirect user to login page
             window.location.href = "/";  // Redirect to login page
         });
     }
 
 
+    /* Fetch New Data Button */
+
+    // Select the "Fetch New Data" button
     const fetchNewDataBtn = document.querySelector('button[name="new"]');
     if (fetchNewDataBtn) {
         fetchNewDataBtn.addEventListener("click", async () => {
+
+            // Trigger background data fetch on the server
             const response = await fetch("/fetch_new_data", {
                 method: "POST"
             });
+
+            // Redirect if the server responds with a redirect
             if (response.redirected) {
                 window.location.href = response.url;
             }

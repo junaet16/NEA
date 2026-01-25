@@ -1,19 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- Character encoding for proper text rendering -->
     <meta charset="UTF-8">
+
+    <!-- Title shown in the browser tab -->
     <title>Title of Programme</title>
+
+    <!-- Stylesheet for the login page -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/loginStyle.css') }}">
 </head>
 
 <body class="page">
 
+    <!-- Main page title -->
     <h1 class="title">Title of Programme</h1>
 
+    <!-- Container holding the login form and messages -->
     <div class="container">
 
+        <!-- Login / Sign-up form -->
         <form class="loginForm" method="POST">
 
+            <!-- Username input field -->
             <input
                 class="textInput"
                 type="text"
@@ -22,6 +31,7 @@
                 required
             >
 
+            <!-- Password input field -->
             <input
                 class="textInput"
                 type="password"
@@ -30,11 +40,14 @@
                 required
             >
 
+            <!-- Container for login and sign-up buttons -->
             <div class="buttonRow">
+                <!-- Login button submits the form with actionName=login -->
                 <button class="button" type="submit" name="actionName" value="login">
                     Login
                 </button>
 
+                <!-- Sign-up button submits the form with actionName=signUp -->
                 <button class="button" type="submit" name="actionName" value="signUp">
                     Sign Up
                 </button>
@@ -42,6 +55,7 @@
 
         </form>
 
+        <!-- Displays feedback messages from the server (e.g. login errors) -->
         {% if message %}
             <div class="message">{{ message }}</div>
         {% endif %}

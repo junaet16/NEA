@@ -1,93 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Character encoding to ensure correct rendering of text -->
     <meta charset="UTF-8">
-    <title>Update Page</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/update.css') }}">
-    <script src="{{ url_for('static', filename='js/updatePage.js') }}"></script>
 
+    <!-- Title shown in the browser tab -->
+    <title>Update Page</title>
+
+    <!-- CSS file used to style the update/parameter page -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/update.css') }}">
+
+    <!-- JavaScript file handling button actions and parameter updates -->
+    <script src="{{ url_for('static', filename='js/updatePage.js') }}"></script>
 </head>
+
 <body>
 
+    <!-- Main outer container for page layout -->
     <div class="mainContainer">
 
+        <!-- Container specifically for the update page content -->
         <div class="updatePageContainer">
 
+            <!-- Form used to update user-specific parameters -->
             <form method="POST" class="updateForm">
+
+                <!-- Table wrapper for displaying editable parameters -->
                 <div class="parameterTable">
                     <table>
+
+                        <!-- Time penalty applied when changing trains -->
                         <tr>
-                            <td><label for="param1">Time taken to change trains:</label></td>
+                            <td><label for="param1">Time taken to change trains (minutes):</label></td>
                             <td><input type="number" id="param1" name="param1" value="{{ CHANGING_TIME }}" required></td>
                         </tr>
+
+                        <!-- Maximum time window in which an event can affect a journey -->
                         <tr>
-                            <td><label for="param2">Length of effect of event:</label></td>
+                            <td><label for="param2">Length of effect of event (minutes):</label></td>
                             <td><input type="number" id="param2" name="param2" value="{{ MAX_TIME_WINDOW }}" required></td>
                         </tr>
+
+                        <!-- Offset before event start where arrival peaks usually occur -->
                         <tr>
                             <td><label for="param3">Peak offset before the game (minutes):</label></td>
                             <td><input type="number" id="param3" name="param3" value="{{ rawArrivalPeakOffset }}" required></td>
                         </tr>
+
+                        <!-- Offset after event end where departure peaks usually occur -->
                         <tr>
                             <td><label for="param4">Peak offset after the game (minutes):</label></td>
                             <td><input type="number" id="param4" name="param4" value="{{ rawDeparturePeakOffset }}" required></td>
                         </tr>
+
+                        <!-- Expected attendance as a proportion of venue capacity -->
                         <tr>
                             <td><label for="param5">Match attendance (%):</label></td>
                             <td><input type="number" id="param5" name="param5" value="{{ ATTENDANCE }}" required></td>
                         </tr>
+
+                        <!-- Proportion of attendees expected to use TfL rail services -->
                         <tr>
-                            <td><label for="param6">Proportion of people using TfL rail:</label></td>
+                            <td><label for="param6">Proportion of people using TfL rail (%):</label></td>
                             <td><input type="number" id="param6" name="param6" value="{{ TRAIN_PROPORTION }}" required></td>
                         </tr>
+
+                        <!-- Sigma scaling factor used in Gaussian crowding calculation -->
                         <tr>
                             <td><label for="param7">Sigma factor for calculating initial crowding:</label></td>
                             <td><input type="number" id="param7" name="param7" value="{{ SIGMA_FACTOR }}" required></td>
                         </tr>
+
+                        <!-- Minimum number of people required for crowding to propagate -->
                         <tr>
                             <td><label for="param8">Minimum people needed for effect:</label></td>
                             <td><input type="number" id="param8" name="param8" value="{{ MINIMUM_PEOPLE }}" required></td>
                         </tr>
+
+                        <!-- Delay contribution added per person at a station -->
                         <tr>
-                            <td><label for="param9">Delay per person:</label></td>
+                            <td><label for="param9">Delay per person (minutes):</label></td>
                             <td><input type="number" id="param9" name="param9" value="{{ PERSON_DELAY }}" required></td>
                         </tr>
+
+                        <!-- Proportion of people retained when propagating to adjacent stations -->
                         <tr>
                             <td><label for="param10">People dropped off per hop (%):</label></td>
                             <td><input type="number" id="param10" name="param10" value="{{ PROPAGATION_FACTOR }}" required></td>
                         </tr>
+
+                        <!-- Average walking time between venues and stations -->
                         <tr>
-                            <td><label for="param11">Average walking distance walking time:</label></td>
+                            <td><label for="param11">Average walking distance walking time (minutes):</label></td>
                             <td><input type="number" id="param11" name="param11" value="{{ WALKING_TIME }}" required></td>
                         </tr>
+
+                        <!-- Average walking speed used for distance calculations -->
                         <tr>
-                            <td><label for="param12">Average walking speed:</label></td>
+                            <td><label for="param12">Average walking speed (km h^-1):</label></td>
                             <td><input type="number" id="param12" name="param12" value="{{ WALKING_SPEED }}" required></td>
                         </tr>
+
+                        <!-- Upper threshold for stations considered to have normal crowding -->
                         <tr>
                             <td><label for="param13">Max crowding factor threshold for normal crowding:</label></td>
                             <td><input type="number" id="param13" name="param13" value="{{ NORMAL }}" required></td>
                         </tr>
+
+                        <!-- Upper threshold for stations considered slightly crowded -->
                         <tr>
                             <td><label for="param14">Max crowding factor threshold for slight levels of crowding:</label></td>
                             <td><input type="number" id="param14" name="param14" value="{{ SLIGHTLY }}" required></td>
                         </tr>
+
+                        <!-- Upper threshold for stations considered busy -->
                         <tr>
                             <td><label for="param15">Max crowding factor threshold for busy:</label></td>
                             <td><input type="number" id="param15" name="param15" value="{{ BUSY }}" required></td>
                         </tr>
+
                     </table>
                 </div>
 
+                <!-- Section containing action buttons -->
                 <div class="buttonSection">
                     <div class="buttonGroup">
-                        <button type="button" class="actionButton" name="loadDefault">Load Default Values</button>
 
-                        <button type="button" class="actionButton" name="save">Save</button>
+                        <!-- Loads default parameter values from file -->
+                        <button type="button" class="actionButton" name="loadDefault">
+                            Load Default Values
+                        </button>
 
-                        <button type="button" class="actionButton" name="new">Fetch New Data</button>
+                        <!-- Saves current parameter values to the database -->
+                        <button type="button" class="actionButton" name="save">
+                            Save
+                        </button>
 
-                        <button type="button" class="actionButton" name="logOut">Log Out</button>
+                        <!-- Triggers background fetch of new external data -->
+                        <button type="button" class="actionButton" name="new">
+                            Fetch New Data
+                        </button>
+
+                        <!-- Logs the user out of the application -->
+                        <button type="button" class="actionButton" name="logOut">
+                            Log Out
+                        </button>
+
                     </div>
                 </div>
 

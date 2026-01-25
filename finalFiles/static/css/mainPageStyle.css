@@ -1,8 +1,10 @@
+/* General page styling */
 .body {
     margin: 0;
     font-family: Arial, sans-serif;
 }
 
+/* Top title section */
 .titleSection {
     height: 10vh;
     background-color: #333;
@@ -14,11 +16,13 @@
     text-align: center;
 }
 
+/* Main container with input and output sections */
 .mainContainer {
     display: flex;
     height: 80vh;
 }
 
+/* Input section styling */
 .inputSection {
     width: 30%;
     padding: 20px;
@@ -52,6 +56,7 @@
     cursor: pointer;
 }
 
+/* Output section styling */
 .outputSection {
     display: flex;
     justify-content: space-between;
@@ -95,6 +100,7 @@
     color: #555;
 }
 
+/* Update button fixed position */
 .updateButton {
     position: fixed;
     bottom: 20px;
@@ -103,6 +109,7 @@
     cursor: pointer;
 }
 
+/* Select2 plugin customization */
 .select2-container {
     width: 100% !important;
 }
@@ -127,6 +134,7 @@
     height: 40px;
 }
 
+/* Error message styling */
 .errorMessage {
     color: red;
     font-size: 14px;

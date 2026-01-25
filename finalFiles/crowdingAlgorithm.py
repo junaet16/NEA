@@ -25,18 +25,24 @@ def calculateDefaultMidjourneyTime(baseInputData, databaseFile, CHANGING_TIME):
     endStation = baseInputData["endStation"]
 
     graph = MakeGraph(databaseFile)
+    # Run Dijkstra to get the shortest path steps from start to end and the time for the journey (if there was no crowding)
     steps = Dijkstra(graph, startStation, endStation, CHANGING_TIME)
     totalMinutes = steps[-1][3] #steps is in the form [[PreviousStationNaPTAN, NextStationNaPTAN, lineID, LengthOfTimeToPoint],...]
     halfMinutes = totalMinutes // 2
 
+    # Convert journey start to datetime object
     timeObject = datetime.datetime.strptime(journeyStart, "%H:%M")
+
+    # Add half journey duration to get midpoint
     timeDelta = datetime.timedelta(minutes=halfMinutes)
     timeObject += timeDelta
 
     return timeObject
 
 
-#As the name suggests, it returns the list of events in the timeframe in which an event might impact the journey - I might change the format of the returned data later
+# Returns events that might impact the journey based on a given timeframe
+# Takes into account the peak offsets for arrivals and departures
+# Returns dictionary of events: {(venue, date): [minuteDifference, startDiff, endDiff]}
 def findEventsInTimeFrame(midjourneyTime, databaseFile, baseInputData, MAX_TIME_WINDOW, arrivalPeakOffset, departurePeakOffset):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -56,15 +62,18 @@ def findEventsInTimeFrame(midjourneyTime, databaseFile, baseInputData, MAX_TIME_
         eventTime = datetime.datetime.strptime(event[2], "%H:%M")
         endTime = eventTime + datetime.timedelta(minutes=duration)
 
+        # Calculate difference from journey midpoint to arrival and departure peaks
         startTimeDifference = abs(eventTime - arrivalPeakOffset - midjourneyTime) #Peaks are unlikely to be immediately at the start or end of an event
         endTimeDifference = abs((endTime + departurePeakOffset) - midjourneyTime)
 
+        # Choose the smaller of the two differences for maximum impact (the closer events are in time, the bigger their impacts are)
         if startTimeDifference > endTimeDifference:
             timeDifference = endTimeDifference
         else:
             timeDifference = startTimeDifference
         minutesDifference = timeDifference.total_seconds() // 60
 
+        # Only consider events within the MAX_TIME_WINDOW
         if minutesDifference <= MAX_TIME_WINDOW:
             venue = event[0]
             startDifferenceMinutes = startTimeDifference.total_seconds() // 60
@@ -83,12 +92,15 @@ def inverseWeight(stationDistances):
     weights = {}
     proportions = {}
     totalWeight = 0
+
+    # Calculate inverse-distance weight for each station
     for station in stationDistances.keys():
         distance = stationDistances[station]
         weight = 1 / (distance + extra)
         totalWeight += weight
         weights[station] = weight
 
+    # Convert weights to proportions of total
     for station in weights.keys():
         proportion = weights[station] / totalWeight
         proportions[station] = proportion
@@ -96,6 +108,8 @@ def inverseWeight(stationDistances):
     return proportions
 
 
+# Fetches stations near a venue and their distance from the venue
+# Returns dictionary {NaPTAN: distance}
 def returnStationsWithDistances(VenueName, databaseFile):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -115,7 +129,11 @@ def returnStationsWithDistances(VenueName, databaseFile):
     return stationsWithDistances
 
 
-#Returns the proportion of the peak expected number of people at a station at the given time
+# Gaussian factor at peak for crowding
+# relativePeak = expected peak
+# relativeTimeDifference = time offset from peak
+# sigma = standard deviation for the Gaussian curve
+# Returns a value between 0 and 1 representing relative crowding
 def gausianFactorAtPeak(relativePeak, sigma, relativeTimeDifference):
     x = (relativePeak - relativeTimeDifference) / sigma
     returnFactor = math.exp(-0.5 * x * x)
@@ -123,6 +141,7 @@ def gausianFactorAtPeak(relativePeak, sigma, relativeTimeDifference):
 
 
 #For each event, finds the base number of people at the nearby stations at the middle of the journey
+# Returns dictionary {NaPTAN: [arrivalPeople, departurePeople]}
 def findBaseNumberOfPeople(
         capacity,
         ATTENDANCE, #The proportion of seats that will actually be filled
@@ -140,11 +159,13 @@ def findBaseNumberOfPeople(
     totalAttendance = capacity * ATTENDANCE #Gets the expected attendance at the venue
     tflUsageTotal = totalAttendance * TRAIN_PROPORTION #Gets the expected total usage of TfL rail
 
+    # Convert distances into proportional distribution of passengers
     proportions = inverseWeight(statonsWithDistances)
     StationsWithPeopleAtPeak = {}
     for stationID in proportions.keys():
         StationsWithPeopleAtPeak[stationID] = proportions[stationID] * tflUsageTotal
 
+    # Adjust for peak offsets
     relativeArrivalPeakTime = startDifferenceMinutes - arrivalPeakOffset
     relativeDepartPeakTime = endDifferenceMinutes + departurePeakOffset
 
@@ -156,6 +177,7 @@ def findBaseNumberOfPeople(
     arrivalsFactorAtMid = gausianFactorAtPeak(relativeArrivalPeakTime, sigmaArrival, 0)
     depratureFactorAtMid = gausianFactorAtPeak(relativeDepartPeakTime, sigmaDeparture, 0)
 
+    # Compute expected arrivals and departures at each station
     stationsAtMid = {} #Format - {NaPTAN: ArrivalNumbers, DepartureNumbers}
     for stationID in StationsWithPeopleAtPeak.keys():
         arrivalPeople = StationsWithPeopleAtPeak[stationID] * arrivalsFactorAtMid
@@ -178,9 +200,12 @@ def findCapacity(databaseFile, VenueName):
     return capacity
 
 
-#Recursion???????
+# Propagates people counts recursively through the network
+# Updates affected stations using AffectedDijkstraStation objects
 def propegation(graph, stationID, people, MINIMUM_PEOPLE, network, event, PROPEGATION_FACTOR):
-    stationObject = network.nodes[stationID] #Fetches the Dijkstra station object stored in the network 
+    stationObject = network.nodes[stationID] #Fetches the Dijkstra station object stored in the network
+
+    # If station is not yet affected, create a new affected object
     if stationObject.IsAffected() == False:
         NaPTAN = stationID
         StationName = stationObject.StationName
@@ -189,16 +214,21 @@ def propegation(graph, stationID, people, MINIMUM_PEOPLE, network, event, PROPEG
         newStationObject.events[event] = people #Adds the number of people at this station because of this event
         stationObject = newStationObject
         network.nodes[stationID] = stationObject #Replaces old object
+
+    # Check previous people count for this event
     try:
         oldPeople = stationObject.events[event] #This will work If and only if the station was already affected by this event
     except:
         oldPeople = 0 #This will run if the station has been already affected but not by this event so the event can't be found in the object, so the old population will be set as 0
+
     if oldPeople > people:
-        pass #No need to update because a larger wave of people have passed through already. Propegration will not be needed because a larger wave existed which has been propegated already
+        pass #No need to update because a larger wave of people have passed through already. Propagation will not be needed because a larger wave existed which has been propegated already
     else:
         stationObject.events[event] = people
         network.nodes[stationID] = stationObject #Updates the people at this station due to this event at this station
         newPeople = people * PROPEGATION_FACTOR
+
+        # Stop recursion if propagated population is too small
         if newPeople < MINIMUM_PEOPLE:
             pass
         else:
@@ -214,11 +244,13 @@ def getParameters(username, databaseFile):
     return parameterObject
 
 
-#Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries
+# Creates NotAffectedStation and NotAffectedConnection objects which are then stored in the dictionaries
+# All this is stored and contained in a network object
 def createNetwork(baseGraph, databaseFile, stations, connections, network):
     sqlConnection = sqlite3.connect(databaseFile)
     cursor = sqlConnection.cursor()
 
+    # Create station objects
     for StationA in baseGraph.keys():
         cursor.execute("""
             SELECT StationName
@@ -232,6 +264,7 @@ def createNetwork(baseGraph, databaseFile, stations, connections, network):
         baseStationClass = classes.NotAffectedDijkstraStation(NaPTAN, StationName)
         stations[StationA] = baseStationClass
 
+        # Create connection objects
         for connection in baseGraph[StationA]:
             StationA = StationA
             StationB = connection[0]
@@ -279,6 +312,8 @@ def processEvents(events, databaseFile, parameterObject, baseGraph, network):
             stationsWithDistances,
             SIGMA_FACTOR
         )
+
+        # Propagate people through the network recursively
         for station in baseNumberOfPeopleAtStations.keys():
             arrivals = baseNumberOfPeopleAtStations[station][0]
             departures = baseNumberOfPeopleAtStations[station][1]
@@ -320,6 +355,9 @@ def processAffected(baseGraph, parameterObject, network):
     processAffectedConnections(network)
 
 
+# Main function to compute crowding factors for a journey
+# Builds the network, processes events, and applies delays
+# Returns network object with updated delays
 def getCrowdingFactor(username, databaseFile, date, journeyStart, startStation, endStation):
     stations = {}
     connections = {}
@@ -353,6 +391,7 @@ def getCrowdingFactor(username, databaseFile, date, journeyStart, startStation, 
     return network
 
 
+# Adjusts delays across lines to make them consistent along a line
 def spreadDelay(network, databaseFile):
     listOfLines = {}
     listOfLinesWithConnectionObjects = {}
@@ -391,15 +430,19 @@ def spreadDelay(network, databaseFile):
     #Nothing needs to be returned as the objects themselves are not being changed to different objects, only their attributes are being changed and therefore their memory reference is the same
 
 
+# Main for processing a journey
+# Returns network object with stations and connections updated with delays
 def main(date, journeyStart, startStation, endStation, databaseFile, username):
     affectedNetwork = getCrowdingFactor(username, databaseFile, date, journeyStart, startStation, endStation)
     spreadDelay(affectedNetwork, databaseFile) #For line, the connections belonging to that line will have the same delay stored in the LineDelay attribute (local delay is stored in DelayFactor)
 
+    #For testing purposes
     for edgeKey in affectedNetwork.edges.keys():
         connection = affectedNetwork.edges[edgeKey]
         #print(connection.connectionReference, connection.DelayFactor, connection.LineDelay)
         pass
 
+    # For testing purposes
     for nodeKey in affectedNetwork.nodes.keys():
         node = affectedNetwork.nodes[nodeKey]
         #print(node.StationName, node.NaPTAN, node.DelayFactor)
@@ -408,6 +451,7 @@ def main(date, journeyStart, startStation, endStation, databaseFile, username):
     return affectedNetwork
 
 
+#For testing purposes
 if __name__ == "__main__":
     date = "03/12/2025"
     journeyStart = "18:00"

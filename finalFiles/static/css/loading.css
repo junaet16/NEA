@@ -1,22 +1,26 @@
+/* Reset default styles and set box-sizing */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* Ensure full height for body and html */
 body, html {
     height: 100%;
     font-family: Arial, sans-serif;
 }
 
+/* Container for the loading screen */
 .loadingContainer {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 100vh; /* Full viewport height */
     background-color: white;
 }
 
+/* Loading text style with blinking animation */
 .loadingText {
     font-size: 2rem;
     font-weight: bold;
@@ -24,7 +28,7 @@ body, html {
     animation: blink 3s infinite;
 }
 
-
+/* Blink keyframes animation */
 @keyframes blink {
     0% {
         opacity: 1;

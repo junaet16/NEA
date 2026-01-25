@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Sets character encoding to support modern text -->
     <meta charset="UTF-8">
+
+    <!-- Page title shown in the browser tab -->
     <title>Route Search</title>
 
+    <!-- Main stylesheet for the route search page -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mainPageStyle.css') }}">
 
+    <!-- jQuery library used for DOM manipulation and AJAX -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+    <!-- Select2 CSS for enhanced dropdown styling and searching -->
     <link
         href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
         rel="stylesheet"
     />
+
+    <!-- Select2 JavaScript library -->
     <script
         src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js">
     </script>
@@ -19,20 +27,28 @@
 
 <body class="body">
 
+    <!-- Page title section -->
     <div class="titleSection">
         <h1>Route Search</h1>
     </div>
 
+    <!-- Main container holding input and output sections -->
     <div class="mainContainer">
 
+        <!-- User input section -->
         <div class="inputSection">
+            <!-- Main form used to submit journey details -->
             <form method="POST" class="theForm">
 
+                <!-- Start station dropdown (populated dynamically using Select2) -->
                 <select id="start" name="start" required></select>
 
+                <!-- End station dropdown (populated dynamically using Select2) -->
                 <select id="end" name="end" required></select>
 
+                <!-- Container for date and time inputs -->
                 <div class="dateTimeContainer">
+                    <!-- Date input for journey date -->
                     <input
                         type="date"
                         id="date"
@@ -40,6 +56,7 @@
                         required
                     >
 
+                    <!-- Time input for journey start time -->
                     <input
                         type="time"
                         id="time"
@@ -48,16 +65,20 @@
                     >
                 </div>
 
+                <!-- Submit button to trigger route calculation -->
                 <button type="submit" class="submitButton">
                     Search Route
                 </button>
 
+                <!-- Displays validation or logic errors from Flask -->
                 {% if error %}
                     <p class="errorMessage">{{ error }}</p>
                 {% endif %}
 
+                <!-- Displays which lines serve the selected stations -->
                 <div class="stationLinesDisplay">
                     {% if startLines %}
+                        <!-- Lines serving the start station -->
                         <h3>{{ request.form.start }}: </h3>
                         <ul class="startStationList">
                             {% for line in startLines %}
@@ -67,6 +88,7 @@
                     {% endif %}
 
                     {% if endLines %}
+                        <!-- Lines serving the end station -->
                         <h3>{{ request.form.end }}: </h3>
                         <ul class="endStationList">
                             {% for line in endLines %}
@@ -79,13 +101,21 @@
             </form>
         </div>
 
+        <!-- Output section for displaying journey results -->
         <div class="outputSection">
+
+            <!-- Container for the original fastest path -->
             <div class="pathContainer">
                 <h2>Original Fastest Path:</h2>
+
                 {% if formattedOldPath %}
+                    <!-- Loop through each line segment of the original path -->
                     {% for path in formattedOldPath %}
                         <div class="path">
+                            <!-- Line name heading -->
                             <h6 class="lineName">{{ path.LineName }} </h6>
+
+                            <!-- List of stations with crowding descriptions -->
                             <ul>
                                 {% for station in path.ListOfStationNamesAndDescriptions %}
                                     <li>{{ station[0] }} - {{ station[2] }}</li>
@@ -94,18 +124,26 @@
                         </div>
                     {% endfor %}
                 {% endif %}
+
+                <!-- Displays total journey time and arrival time -->
                 <div class="timeContainer">
                     <p>Total Time: {{ oldPathTime }}</p>
                     <p>Arrival Time: {{ oldPathArrival }}</p>
                 </div>
             </div>
 
+            <!-- Container for the recommended (crowding-aware) path -->
             <div class="pathContainer">
                 <h2>Our Recomendation:</h2>
+
                 {% if formattedNewPath %}
+                    <!-- Loop through each line segment of the recommended path -->
                     {% for path in formattedNewPath %}
                         <div class="path">
+                            <!-- Line name heading -->
                             <h6 class="lineName">{{ path.LineName }} </h6>
+
+                            <!-- List of stations with crowding descriptions -->
                             <ul>
                                 {% for station in path.ListOfStationNamesAndDescriptions %}
                                     <li>{{ station[0] }} - {{ station[2] }}</li>
@@ -114,6 +152,8 @@
                         </div>
                     {% endfor %}
                 {% endif %}
+
+                <!-- Displays total journey time and arrival time -->
                 <div class="timeContainer">
                     <p>Total Time: {{ newPathTime }}</p>
                     <p>Arrival Time: {{ newPathArrival }}</p>
@@ -123,9 +163,12 @@
 
     </div>
 
+    <!-- Button to navigate to the parameter update page -->
     <form method="POST">
         <button type="submit" class="updateButton" name="updateButton">Update</button>
     </form>
+
+    <!-- Page-specific JavaScript for dropdowns and dynamic behaviour -->
     <script src="{{ url_for('static', filename='js/mainPageScript.js') }}"></script>
 </body>
 </html>

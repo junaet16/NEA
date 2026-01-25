@@ -1,3 +1,4 @@
+/* Page container */
 .page {
     display: flex;
     flex-direction: column;
@@ -6,6 +7,7 @@
     font-family: Arial, sans-serif;
 }
 
+/* Buttons styling */
 .button {
     padding: 10px;
     font-size: 16px;
@@ -21,13 +23,14 @@
     background-color: seagreen;
 }
 
-
+/* Page title */
 .title {
     text-align: center;
     font-size: 32px;
     margin-bottom: 20px;
 }
 
+/* Container for form elements */
 .container {
     width: 300px;
     display: flex;
@@ -35,6 +38,7 @@
     gap: 12px;
 }
 
+/* Text input styling */
 .textInput {
     width: 100%;
     padding: 10px;
@@ -44,15 +48,17 @@
     border-radius: 4px;
 }
 
+/* Row for buttons */
 .buttonRow {
     display: flex;
     justify-content: space-between;
 }
 
 .buttonRow .button {
-    width: 48%;
+    width: 48%; /* make buttons evenly spaced */
 }
 
+/* Form styling */
 .loginForm {
     display: flex;
     flex-direction: column;
@@ -60,6 +66,7 @@
     width: 100%;
 }
 
+/* Error or informational messages */
 .message {
     color: red;
     font-size: 14px;

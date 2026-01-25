@@ -1,3 +1,5 @@
+/* Styles for the Database Error Page */
+
 /* Center everything vertically and horizontally */
 body {
     font-family: Arial, sans-serif;
@@ -5,10 +7,11 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
+    height: 100vh; /* Full viewport height */
+    margin: 0; /* Remove default margin */
 }
 
+/* Container for the error content */
 .container {
     text-align: center;
     background-color: #fff;
@@ -18,23 +21,27 @@ body {
     max-width: 500px;
 }
 
+/* Heading style */
 h1 {
-    color: #d9534f; /* nice red for error */
+    color: #d9534f; /* Red for error */
     margin-bottom: 20px;
 }
 
+/* Error message style */
 .error-message {
     font-size: 1.2em;
     color: #d9534f;
     margin-bottom: 30px;
 }
 
+/* Optional informational messages */
 .info-message {
     margin-top: 20px;
     font-size: 1em;
     color: #555;
 }
 
+/* Retry button styling */
 .retry-button {
     background-color: #0275d8;
     color: white;
@@ -47,5 +54,5 @@ h1 {
 }
 
 .retry-button:hover {
-    background-color: #025aa5;
+    background-color: #025aa5; /* Darker blue on hover */
 }

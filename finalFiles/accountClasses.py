@@ -4,22 +4,24 @@ import json
 class Parameters():
     def __init__(
             self,
-            CHANGING_TIME, #This is the additional take added to each journey
-            MAX_TIME_WINDOW, #This is the maximum time from the peak that if an event falls within it, will be considered in the calculations for crowding
-            rawArrivalPeakOffset, #This is the raw number in minutes of the peak of crowding from the start of a game
-            rawDeparturePeakOffset, #This is the raw number in minutes of the peak of crowding from the end of a game
-            ATTENDANCE, #This is the proportion of the capacity of the stadium that will attend the event (0-1)
-            TRAIN_PROPORTION, #This is the proportion of people that attend the game that will use TfL rain services (0-1)
-            SIGMA_FACTOR,
-            MINIMUM_PEOPLE,
-            PERSON_DELAY,
-            PROPAGATION_FACTOR,
-            WALKING_TIME,
-            WALKING_SPEED,
-            NORMAL,
-            SLIGHTLY,
-            BUSY
+            CHANGING_TIME, # Extra time added to each journey (minutes)
+            MAX_TIME_WINDOW, # Maximum time from the event peak to consider crowding (minutes)
+            rawArrivalPeakOffset, # Minutes from event start when crowding peaks on arrival
+            rawDeparturePeakOffset,  # Minutes from event end when crowding peaks on departure
+            ATTENDANCE, # Proportion of stadium capacity attending (0-1)
+            TRAIN_PROPORTION, # Proportion using TfL rail services (0-1)
+            SIGMA_FACTOR, # Factor for stochastic variation in crowding
+            MINIMUM_PEOPLE, # Minimum people threshold for affecting stations
+            PERSON_DELAY, # Additional delay per person on journey
+            PROPAGATION_FACTOR, # Factor for spreading delay across network
+            WALKING_TIME, # Default walking time between station and venue (minutes)
+            WALKING_SPEED, # Default walking speed (m/s)
+            NORMAL, # Crowding thresholds for classification: normal (below this is normal)
+            SLIGHTLY, # Crowding thresholds for classification: slightly busy (below this is slightly busy)
+            BUSY # Crowding thresholds for classification: busy (below this is busy and above is severely busy)
     ):
+
+        # Store all parameters in the object
         self.CHANGING_TIME = CHANGING_TIME
         self.MAX_TIME_WINDOW = MAX_TIME_WINDOW
         self.rawArrivalPeakOffset = rawArrivalPeakOffset
@@ -36,6 +38,7 @@ class Parameters():
         self.SLIGHTLY = SLIGHTLY
         self.BUSY = BUSY
 
+        # Internal attributes for arrival/departure calculations
         self.arrivalWindowMinutes = None
         self.departureWindowMinutes = None
         self.arrivalPeakOffset = None
@@ -43,28 +46,39 @@ class Parameters():
         self.arrivalMinutesOffset = None
         self.departureMinutesOffset = None
 
+
     # When I was initially writing the program, window minutes for both arrival and departure were entered differently, so the program is written with the assumpton that they can be different, when in reality they are the same, so here both the arrival and departure window minutes are set to the same max time window that is passed in
     def calculateWindow(self):
+        # The timedelta is useful if I want to add/subtract offsets from event start/end
         self.arrivalWindowMinutes = self.MAX_TIME_WINDOW
         self.departureWindowMinutes = self.MAX_TIME_WINDOW
 
-    #Sets the
+
+    # Converts raw peak offsets to datetime.timedelta objects for internal use
     def calculatePeakOffset(self):
         import datetime
         self.arrivalPeakOffset = datetime.timedelta(self.rawArrivalPeakOffset)
         self.departurePeakOffset = datetime.timedelta(self.rawDeparturePeakOffset)
 
+
+    # Converts the peak offsets to numeric minutes for simpler calculations
     def calculateMinutesOffset(self):
         self.arrivalMinutesOffset = self.arrivalPeakOffset.total_seconds() / 60
         self.departureMinutesOffset = self.departurePeakOffset.total_seconds() / 60
 
 
+
+# This subclass is used when creating a new account
+# It loads default parameters from a JSON file so each user starts with reasonable defaults
 class AccountCreationParameters(Parameters):
     def __init__(self, defaultParameters):
+        # Initialise with placeholder zeros; these will be overwritten by JSON
         super().__init__(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
+        # Load default parameters from JSON configuration file
         with open(defaultParameters, 'r') as file:
             rawData = json.load(file)
 
+        # Dynamically assign attributes from JSON keys
         for key, value in rawData.items():
             setattr(self, key, value)

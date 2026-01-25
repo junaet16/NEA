@@ -1,21 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Character encoding to ensure correct text rendering -->
     <meta charset="UTF-8">
+
+    <!-- Title shown in the browser tab -->
     <title>Database Setup Failed</title>
+
+    <!-- CSS file used to style the database error page -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dbError.css') }}">
 </head>
+
 <body>
+    <!-- Main container for the error message and retry option -->
     <div class="container">
+
+        <!-- Main heading indicating database setup failure -->
         <h1>Database Setup Failed</h1>
 
+        <!-- Paragraph used to display a specific error message (passed from Flask) -->
         <p class="error-message" id="error">{{ errorMessage }}</p>
 
+        <!-- Form containing a retry button to attempt database creation again -->
         <form id="retryForm">
             <button type="submit" class="retry-button">Retry</button>
         </form>
+
     </div>
 
+    <!-- JavaScript file handling retry logic and error-page behaviour -->
     <script src="{{ url_for('static', filename='js/dbError.js') }}"></script>
 </body>
 </html>

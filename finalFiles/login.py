@@ -4,11 +4,14 @@ import os
 import sqlite3
 import classes
 
-
+# Generates a cryptographically secure random salt
+# A unique salt is used per user to protect against rainbow table attacks
 def generateSalt():
     return os.urandom(16).hex() #Creates a random 16-byte salt and returns it as hex
 
 
+# Creates a SHA-256 hash of the password combined with a salt
+# Passwords are never stored in plain text
 def createHashPassword(password, salt):
     saltedPassword = salt + password
     byteForm = saltedPassword.encode()
@@ -17,11 +20,16 @@ def createHashPassword(password, salt):
     return hashedPassword
 
 
+# Creates a new user account and stores default modelling parameters
+# Each user begins with a copy of the default assumptions, which they can later modify
 def createAccount(defaultParametersFile, username, password, databaseFile):
     salt = generateSalt()
     hashedPassword = createHashPassword(password, salt)
+
+    # Loads default crowding and delay parameters from a file storing default values
     defaultParametersObject = classes.AccountCreationParameters(defaultParametersFile)
 
+    # Tuple contains login credentials and all model parameters
     parameterTuple = (
         username,
         hashedPassword,
@@ -47,6 +55,7 @@ def createAccount(defaultParametersFile, username, password, databaseFile):
     cursor = connection.cursor()
 
     try:
+        # Insert user credentials and modelling parameters into Users table
         cursor.execute(
             """
             INSERT INTO Users(
@@ -75,6 +84,7 @@ def createAccount(defaultParametersFile, username, password, databaseFile):
         )
         accountMade = True
     except:
+        # Likely occurs if username already exists
         accountMade = False
 
     connection.commit()
@@ -83,6 +93,7 @@ def createAccount(defaultParametersFile, username, password, databaseFile):
     return accountMade
 
 
+# Authenticates a user by hashing the entered password with the stored salt
 def login(databaseFile, username, password):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -114,6 +125,7 @@ def login(databaseFile, username, password):
     return message
 
 
+# For testing purposes
 def main(username, password, defaultParametersFile, databaseFile):
     accountCreated = createAccount(defaultParametersFile, username, password, databaseFile)
     loginSuccessful = login(databaseFile, username, password)
@@ -121,6 +133,7 @@ def main(username, password, defaultParametersFile, databaseFile):
     print(loginSuccessful)
 
 
+#For testing purposes
 if __name__ == '__main__':
     username = "Jun8"
     password = "h"
