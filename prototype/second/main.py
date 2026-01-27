@@ -15,7 +15,7 @@ if __name__ == '__main__':
     # Example stations and CHANGING_TIME
     startStation = "A"
     endStation = "C"
-    CHANGING_TIME = 3
+    CHANGING_TIME = 4.4
 
     # The path in the form [(StationA, StationB, Line, timeToStation), ...]
     pathSteps = pathFinding.Dijkstra(listOfNeighbourStations, startStation, endStation, CHANGING_TIME)

@@ -19,38 +19,21 @@ def CreateTestDatabase(databaseFile):
     cursor.execute("DELETE FROM connections")
 
     # Fake test data
-    # Network layout (simplified):
-
-    #
-    # A --(Red)--> B --(Red)--> C
-    #  \                        | (Blue)
-    #   \(Blue)--> D --(Blue)--> E
-    #                 \
-    #                 (Green)
-    #                   \
-    #                    C
-    #
 
     testConnections = [
-        ("A", "B", "Red", 5),
-        ("B", "C", "Red", 5),
-
-        ("A", "D", "Blue", 4),
-        ("D", "E", "Blue", 4),
-        ("E", "C", "Blue", 4),
-
-        ("D", "C", "Green", 6),
-
-        # Add reverse directions (for realistic networks)
-        ("B", "A", "Red", 5),
-        ("C", "B", "Red", 5),
-
-        ("D", "A", "Blue", 4),
-        ("E", "D", "Blue", 4),
-        ("C", "E", "Blue", 4),
-
-        ("C", "D", "Green", 6),
+        # Path 1: A->B->C (2 lines)
+        ("A", "B", "Line1", 4),
+        ("B", "C", "Line2", 5),
+        # Path 2: A->D->C (1 line)
+        ("A", "D", "Line3", 5),
+        ("D", "C", "Line3", 5),
+        # Reverse directions
+        ("B", "A", "Line1", 5),
+        ("C", "B", "Line2", 5),
+        ("D", "A", "Line3", 5),
+        ("C", "D", "Line3", 5),
     ]
+
 
     cursor.executemany("""
     INSERT INTO connections (StationA, StationB, LineID, BaseTravelTime)
