@@ -10,7 +10,7 @@ class Parameters():
             rawDeparturePeakOffset,  # Minutes from event end when crowding peaks on departure
             ATTENDANCE, # Proportion of stadium capacity attending (0-1)
             TRAIN_PROPORTION, # Proportion using TfL rail services (0-1)
-            SIGMA_FACTOR, # Factor for stochastic variation in crowding
+            SIGMA_FACTOR, # Controls how tightly people cluster around the peak time — it converts a time window into a Gaussian spread
             MINIMUM_PEOPLE, # Minimum people threshold for affecting stations
             PERSON_DELAY, # Additional delay per person on journey
             PROPAGATION_FACTOR, # Factor for spreading delay across network

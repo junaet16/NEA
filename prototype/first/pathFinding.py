@@ -23,8 +23,8 @@ def MakeGraph(databaseFile):
 
 
 # It is assumed that all stations can be accessed from any other station because the graph is made from the data for me stored in the database which is always complete for the function to be called in the first place
-#On the TfL network, every station is eventually connected to every other station
-def Dijkstra(graph, startStation, goalStation, CHANGING_TIME, penalty=True):
+# On the TfL network, every station is eventually connected to every other station
+def Dijkstra(graph, startStation, goalStation):
     distances = collections.defaultdict(lambda: math.inf) #Best known time to each station
     cameFrom = {} #To reconstruct path later
     visited = set() #Stores visited stations
@@ -53,12 +53,6 @@ def Dijkstra(graph, startStation, goalStation, CHANGING_TIME, penalty=True):
         # Explore all neighbours of this station
         for nextStation, baseTravelTime, nextLine in graph[currentStation]:
             travelTime = baseTravelTime
-
-            if penalty: #Can be turned off if needed (for testing purposes)
-                if currentLine is not None and currentLine != nextLine:
-                #Initially no line is chosen, so the penalty is not added for changing lines
-                #If the line is switched to travel to the next station, the penalty is added to the cost
-                    travelTime += CHANGING_TIME
 
             # New total time to reach the neighbour
             newCost = currentCost + travelTime
