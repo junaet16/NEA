@@ -77,7 +77,7 @@ def createDatabase(databaseFile):
         CREATE TABLE IF NOT EXISTS Users (
             Username TEXT PRIMARY KEY,
             PasswordHash TEXT,
-            Salt,
+            Salt TEXT,
             CHANGING_TIME REAL,
             MAX_TIME_WINDOW REAL,
             rawArrivalPeakOffset REAL,
