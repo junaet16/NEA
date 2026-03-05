@@ -1,7 +1,7 @@
 {
   "CHANGING_TIME" : 4.4,
   "MAX_TIME_WINDOW" : 120,
-  "rawArrivalPeakOffset" : 45,
+  "rawArrivalPeakOffset" : 25,
   "rawDeparturePeakOffset" : 25,
   "ATTENDANCE" : 0.95,
   "TRAIN_PROPORTION" : 0.75,
