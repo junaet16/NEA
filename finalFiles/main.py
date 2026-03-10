@@ -127,6 +127,8 @@ def mainPage():
     newPathTime = None
     newPathArrival = None
 
+    validDateCheck = True #Toggle on and off for testing
+
     if request.method == 'POST':
         if "updateButton" in request.form:
             # Redirect to update parameters page
@@ -141,7 +143,8 @@ def mainPage():
 
             if start == end:
                 error = "Start and end stations must be different"
-            #ADD ELIF STATEMENT HERE to check if the selected time is before the current time
+            elif validDateCheck and selectedTime < datetime.now():
+                error = "Selected time must be in the future"
             else:
                 # Format date for getResults
                 dateObject = datetime.strptime(date, "%Y-%m-%d")
