@@ -9,6 +9,7 @@ import databaseCreation
 import threading
 import json
 import storeStadiumData
+import customFunctions
 
 
 # Flask app initialisation
@@ -51,6 +52,7 @@ def loginPage():
     databaseFile = app.config["DATABASE_FILE"]
     flagsFile = app.config["FLAGS_FILE"]
     defaultParametersFile = app.config["DEFAULT_PARAMETERS_FILE"]
+    londonjsonFile = app.config["LONDONJSON_FILE"]
     message = None
 
     # Store previous page URL in session (used for redirects later)
@@ -84,6 +86,15 @@ def loginPage():
             loginMessage = login.login(databaseFile, username, password)
             if loginMessage == "Login Successful":
                 session["username"] = username
+
+                params = customFunctions.getParameters(username, databaseFile)
+                storeStadiumData.redoStore(
+                    params.WALKING_TIME,
+                    params.WALKING_SPEED,
+                    londonjsonFile,
+                    databaseFile
+                )
+
                 return redirect(url_for("mainPage"))
             else:
                 message = loginMessage
@@ -91,6 +102,15 @@ def loginPage():
             accountMade = login.createAccount(defaultParametersFile, username, password, databaseFile)
             if accountMade:
                 session["username"] = username
+
+                params = customFunctions.getParameters(username, databaseFile)
+                storeStadiumData.redoStore(
+                    params.WALKING_TIME,
+                    params.WALKING_SPEED,
+                    londonjsonFile,
+                    databaseFile
+                )
+
                 return redirect(url_for("mainPage"))
             else:
                 message = "Account already created"
