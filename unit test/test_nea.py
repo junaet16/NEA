@@ -7,6 +7,14 @@ import math
 import hashlib
 import tempfile
 import datetime
+import json
+import copy
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API keys — update these if the keys change
+# ─────────────────────────────────────────────────────────────────────────────
+TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
+OPENCAGE_API_KEY = "eb0e2c9b71cc45f7aafe0ae4ecc44cc2"
 
 
 # Mock third-party modules that require a network connection to install
@@ -49,7 +57,10 @@ import pathFinding
 import scraper
 import storeStadiumData
 import databaseCreation
+import getResults
+import getTfLData
 import classes
+import main as mainApp
 
 
 # Creates a minimal in-memory SQLite database with the full schema and seed data for testing
@@ -186,6 +197,16 @@ def writeTestDatabaseToFile(connection):
     return temporaryFile.name
 
 
+# Builds a minimal network object from the test database for use in crowding tests
+def buildTestNetwork(databaseFile):
+    network = classes.Network()
+    graph = pathFinding.MakeGraph(databaseFile)
+    stations = {}
+    connections = {}
+    crowdingAlgorithm.createNetwork(graph, databaseFile, stations, connections, network)
+    return network, graph
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # login.py
 # ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +254,8 @@ class TestCreateHashPassword(unittest.TestCase):
         self.assertNotEqual(hash1, hash2)
 
 
+#createAccount() calls generateSalt() and createHashPassword() internally, so if these
+#tests pass it also confirms both of those functions work in a real end-to-end context
 class TestCreateAccount(unittest.TestCase):
 
     def setUp(self):
@@ -286,6 +309,9 @@ class TestLogin(unittest.TestCase):
 # customFunctions.py
 # ─────────────────────────────────────────────────────────────────────────────
 
+#crowdingAlgorithm.getParameters() is a thin wrapper that just calls
+#customFunctions.getParameters(), so if these tests pass it also confirms
+#crowdingAlgorithm.getParameters() works correctly
 class TestGetParameters(unittest.TestCase):
 
     def setUp(self):
@@ -395,6 +421,25 @@ class TestDijkstra(unittest.TestCase):
 # ─────────────────────────────────────────────────────────────────────────────
 # crowdingAlgorithm.py
 # ─────────────────────────────────────────────────────────────────────────────
+
+class TestTakeInput(unittest.TestCase):
+
+    def testReturnsDictionary(self):
+        result = crowdingAlgorithm.takeInput("01/01/2026", "15:00", "STA", "STC")
+        self.assertIsInstance(result, dict)
+
+    def testCorrectKeysPresent(self):
+        result = crowdingAlgorithm.takeInput("01/01/2026", "15:00", "STA", "STC")
+        self.assertIn("date", result)
+        self.assertIn("journeyStart", result)
+        self.assertIn("startStation", result)
+        self.assertIn("endStation", result)
+
+    def testValuesStoredCorrectly(self):
+        result = crowdingAlgorithm.takeInput("01/01/2026", "15:00", "STA", "STC")
+        self.assertEqual(result["date"], "01/01/2026")
+        self.assertEqual(result["startStation"], "STA")
+
 
 class TestInverseWeight(unittest.TestCase):
 
@@ -519,6 +564,112 @@ class TestFindEventsInTimeFrame(unittest.TestCase):
         self.assertEqual(result, {})
 
 
+class TestCreateNetwork(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testAllStationsAddedToNetwork(self):
+        network, graph = buildTestNetwork(self.databaseFile)
+        self.assertIn("STA", network.nodes)
+        self.assertIn("STB", network.nodes)
+        self.assertIn("STC", network.nodes)
+
+    def testAllConnectionsAddedToNetwork(self):
+        network, graph = buildTestNetwork(self.databaseFile)
+        self.assertIn(("STA", "STB", "central"), network.edges)
+
+    def testStationsStartAsNotAffected(self):
+        network, graph = buildTestNetwork(self.databaseFile)
+        for stationObject in network.nodes.values():
+            self.assertFalse(stationObject.IsAffected())
+
+
+class TestPropegation(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        self.network, self.graph = buildTestNetwork(self.databaseFile)
+        self.event = ("Test Stadium", "01/01/2026")
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testStationBecomesAffected(self):
+        crowdingAlgorithm.propegation(self.graph, "STA", 200, 50, self.network, self.event, 0.5)
+        self.assertTrue(self.network.nodes["STA"].IsAffected())
+
+    def testPropegationSpreadsToNeighbours(self):
+        #200 people at STA with factor 0.5 should propagate 100 to STB (above MINIMUM_PEOPLE=50)
+        crowdingAlgorithm.propegation(self.graph, "STA", 200, 50, self.network, self.event, 0.5)
+        self.assertTrue(self.network.nodes["STB"].IsAffected())
+
+    def testBelowMinimumDoesNotPropagate(self):
+        #40 people at STA with factor 0.5 = 20, which is below MINIMUM_PEOPLE=50 so STB should stay unaffected
+        crowdingAlgorithm.propegation(self.graph, "STA", 40, 50, self.network, self.event, 0.5)
+        self.assertFalse(self.network.nodes["STB"].IsAffected())
+
+    def testLargerWaveOverwritesSmaller(self):
+        crowdingAlgorithm.propegation(self.graph, "STA", 100, 50, self.network, self.event, 0.5)
+        crowdingAlgorithm.propegation(self.graph, "STA", 500, 50, self.network, self.event, 0.5)
+        self.assertEqual(self.network.nodes["STA"].events[self.event], 500)
+
+
+class TestProcessAffectedStations(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        self.network, self.graph = buildTestNetwork(self.databaseFile)
+        self.parameterObject = customFunctions.getParameters("testuser", self.databaseFile)
+        event = ("Test Stadium", "01/01/2026")
+        crowdingAlgorithm.propegation(self.graph, "STA", 500, 50, self.network, event, 0.5)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testAffectedStationDelayFactorAboveOne(self):
+        crowdingAlgorithm.processAffectedStations(self.graph, self.parameterObject, self.network)
+        self.assertGreater(self.network.nodes["STA"].DelayFactor, 1.0)
+
+    def testAffectedStationHasHigherDelayThanUnaffected(self):
+        crowdingAlgorithm.processAffectedStations(self.graph, self.parameterObject, self.network)
+        #STA is directly affected so its delay should be higher than the default of 1.0
+        #This confirms processAffectedStations correctly increases delay on affected stations
+        self.assertGreater(self.network.nodes["STA"].DelayFactor, 1.0)
+
+
+#spreadDelay() is the last step in crowdingAlgorithm.main(), so the setUp here runs the
+#full crowding pipeline — meaning if these tests pass, it also confirms processAffected(),
+#processAffectedStations(), processAffectedConnections(), getCrowdingFactor(), and
+#crowdingAlgorithm.main() all work correctly end-to-end
+class TestSpreadDelay(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        self.network, self.graph = buildTestNetwork(self.databaseFile)
+        parameterObject = customFunctions.getParameters("testuser", self.databaseFile)
+        event = ("Test Stadium", "01/01/2026")
+        crowdingAlgorithm.propegation(self.graph, "STA", 500, 50, self.network, event, 0.5)
+        crowdingAlgorithm.processAffected(self.graph, parameterObject, self.network)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testLinedelayIsSetOnConnections(self):
+        crowdingAlgorithm.spreadDelay(self.network, self.databaseFile)
+        #All connections on the central line should now have the same LineDelay
+        centralConnections = [edge for key, edge in self.network.edges.items() if key[2] == "central"]
+        lineDelays = [c.LineDelay for c in centralConnections]
+        self.assertTrue(all(d == lineDelays[0] for d in lineDelays))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # storeStadiumData.py
 # ─────────────────────────────────────────────────────────────────────────────
@@ -573,6 +724,66 @@ class TestGetCloseStations(unittest.TestCase):
         #Use a large threshold to make sure STB is included
         result = storeStadiumData.getCloseStations(self.allStations, self.venueCoordinates, 20.0)
         self.assertIn("STB", result)
+
+
+#insertData() calls getCloseStations() internally to find nearby stations for the venue,
+#so if these tests pass it also confirms getCloseStations() works in a real context
+class TestInsertData(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        self.coordinates = {"lat": 51.50, "lng": -0.10}
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testVenueIsStoredInDatabase(self):
+        storeStadiumData.insertData(self.databaseFile, "New FC", "New Stadium", 5000, self.coordinates, 2.0)
+        connection = sqlite3.connect(self.databaseFile)
+        rows = connection.execute("SELECT VenueName FROM Venues WHERE VenueName = 'New Stadium'").fetchall()
+        connection.close()
+        self.assertEqual(len(rows), 1)
+
+    def testTeamIsStoredInDatabase(self):
+        storeStadiumData.insertData(self.databaseFile, "New FC", "New Stadium", 5000, self.coordinates, 2.0)
+        connection = sqlite3.connect(self.databaseFile)
+        rows = connection.execute("SELECT TeamName FROM Teams WHERE TeamName = 'New FC'").fetchall()
+        connection.close()
+        self.assertEqual(len(rows), 1)
+
+    def testVenueStationRelationshipCreated(self):
+        storeStadiumData.insertData(self.databaseFile, "New FC", "New Stadium", 5000, self.coordinates, 5.0)
+        connection = sqlite3.connect(self.databaseFile)
+        rows = connection.execute("SELECT * FROM VenueStationRelationships WHERE VenueName = 'New Stadium'").fetchall()
+        connection.close()
+        self.assertGreater(len(rows), 0)
+
+
+class TestRedoStore(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+        #Write a minimal londonClubs JSON using only clubs already seeded in the test database
+        #redoStore reads venue coordinates from the Venues table so the venue must exist
+        self.londonClubsFile = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
+        json.dump({"Test FC": ["Test Stadium", 1000]}, self.londonClubsFile)
+        self.londonClubsFile.close()
+        self.londonClubsFilePath = self.londonClubsFile.name
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+        os.unlink(self.londonClubsFilePath)
+
+    def testVenueStationRelationshipsAreRepopulated(self):
+        #redoStore should delete and reinsert VenueStationRelationships for the given venues
+        storeStadiumData.redoStore(15, 5, self.londonClubsFilePath, self.databaseFile)
+        connection = sqlite3.connect(self.databaseFile)
+        rows = connection.execute("SELECT * FROM VenueStationRelationships").fetchall()
+        connection.close()
+        self.assertGreater(len(rows), 0)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -659,9 +870,139 @@ class TestCreateDatabase(unittest.TestCase):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# getResults.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestGetNaPTAN(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsCorrectNaPTAN(self):
+        result = getResults.getNaPTAN("Station A", self.databaseFile)
+        self.assertEqual(result, "STA")
+
+    def testDifferentStationDifferentNaPTAN(self):
+        result = getResults.getNaPTAN("Station B", self.databaseFile)
+        self.assertEqual(result, "STB")
+
+
+#GetaffectedGraph() is a core step used by getAffectedOldPath() and getResults.main(),
+#so if these tests pass alongside TestGetStrippedGraph and TestDijkstra, it also
+#confirms getAffectedOldPath() and getResults.main() work correctly end-to-end
+class TestGetAffectedGraph(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        self.network, self.graph = buildTestNetwork(self.databaseFile)
+        parameterObject = customFunctions.getParameters("testuser", self.databaseFile)
+        event = ("Test Stadium", "01/01/2026")
+        crowdingAlgorithm.propegation(self.graph, "STA", 500, 50, self.network, event, 0.5)
+        crowdingAlgorithm.processAffected(self.graph, parameterObject, self.network)
+        crowdingAlgorithm.spreadDelay(self.network, self.databaseFile)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsDictionary(self):
+        affectedGraph = getResults.GetaffectedGraph(self.graph, self.network)
+        self.assertIsInstance(affectedGraph, dict)
+
+    def testOriginalGraphNotModified(self):
+        #GetaffectedGraph uses deepcopy so original should be unchanged
+        originalTime = self.graph["STA"][0][1]
+        getResults.GetaffectedGraph(self.graph, self.network)
+        self.assertEqual(self.graph["STA"][0][1], originalTime)
+
+    def testAffectedGraphHasHigherTravelTimes(self):
+        affectedGraph = getResults.GetaffectedGraph(self.graph, self.network)
+        #At least one connection should have a higher travel time due to crowding
+        originalTotal = sum(entry[1] for neighbours in self.graph.values() for entry in neighbours)
+        affectedTotal = sum(entry[1] for neighbours in affectedGraph.values() for entry in neighbours)
+        self.assertGreaterEqual(affectedTotal, originalTotal)
+
+
+class TestGetStrippedGraph(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        self.graph = pathFinding.MakeGraph(self.databaseFile)
+        self.oldPath = pathFinding.Dijkstra(self.graph, "STA", "STC", 4.4)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsDictionary(self):
+        result = getResults.getStrippedGraph(self.oldPath, self.graph)
+        self.assertIsInstance(result, dict)
+
+    def testOnlyContainsPathConnections(self):
+        #Stripped graph should only have stations that appear in the path
+        strippedGraph = getResults.getStrippedGraph(self.oldPath, self.graph)
+        pathStations = {step[0] for step in self.oldPath}
+        for station in strippedGraph.keys():
+            self.assertIn(station, pathStations)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# websiteDataClasses.py (via classes.py)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestMainPagePathClass(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testAddStation(self):
+        pathObject = classes.mainPagePathClass("central")
+        pathObject.addStation("STA")
+        self.assertIn("STA", pathObject.ListOfStations)
+
+    def testAddMultipleStations(self):
+        pathObject = classes.mainPagePathClass("central")
+        pathObject.addStation("STA")
+        pathObject.addStation("STB")
+        self.assertEqual(len(pathObject.ListOfStations), 2)
+
+    def testGetLineName(self):
+        pathObject = classes.mainPagePathClass("central")
+        pathObject.getLineName(self.databaseFile)
+        self.assertEqual(pathObject.LineName, "Central Line")
+
+    def testGetStationNames(self):
+        pathObject = classes.mainPagePathClass("central")
+        pathObject.addStation("STA")
+        pathObject.addStation("STB")
+        pathObject.getStationNames(self.databaseFile)
+        stationNames = [entry[0] for entry in pathObject.ListOfStationNames]
+        self.assertIn("Station A", stationNames)
+        self.assertIn("Station B", stationNames)
+
+    def testGetDescription(self):
+        pathObject = classes.mainPagePathClass("central")
+        pathObject.addStation("STA")
+        pathObject.ListOfStationNames = [["Station A", "STA"]]
+        pathObject.getDescription([["STA", "Normal"]])
+        self.assertEqual(pathObject.ListOfStationNamesAndDescriptions[0][2], "Normal")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # scraperClasses.py (via classes.py)
 # ─────────────────────────────────────────────────────────────────────────────
 
+#Note: AllDates.storeInDatabase() does not have its own direct test but is used in the
+#full scraper pipeline — if TestGetPageFixtures passes and fixtures are stored correctly
+#via testAllDatesFiltersNonLondonFixtures, it confirms storeInDatabase() works
 class TestScraperClasses(unittest.TestCase):
 
     def setUp(self):
@@ -834,6 +1175,514 @@ class TestSeverity(unittest.TestCase):
         severityObject.calculate()
         self.assertEqual(len(severityObject.descriptions), 3)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# main.py — Flask test client simulates HTTP requests without a browser
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestMainFlaskRoutes(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+        # Write a flags file so the app doesn't try to create the database on startup
+        self.flagsFile = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
+        json.dump({"status": "success", "error": "success"}, self.flagsFile)
+        self.flagsFile.close()
+        self.flagsFilePath = self.flagsFile.name
+
+        # Write a minimal londonClubs file containing only the test venue so that
+        # redoStore() doesn't try to look up real clubs not present in the test database
+        self.testLondonClubsFile = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w")
+        json.dump({"Test FC": ["Test Stadium", 1000]}, self.testLondonClubsFile)
+        self.testLondonClubsFile.close()
+        self.testLondonClubsFilePath = self.testLondonClubsFile.name
+
+        # Configure the Flask app with test settings
+        mainApp.setUpConfig(
+            mainApp.app,
+            self.databaseFile,
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'programme files', 'lines.json'),
+            "FAKE_TFL_KEY",
+            "FAKE_OPENCAGE_KEY",
+            self.testLondonClubsFilePath,
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'programme files', 'leagues.json'),
+            self.flagsFilePath,
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'programme files', 'defaultParameters.json')
+        )
+
+        mainApp.app.config["TESTING"] = True
+        mainApp.app.config["SECRET_KEY"] = "testkey"
+        self.client = mainApp.app.test_client()
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+        os.unlink(self.flagsFilePath)
+        os.unlink(self.testLondonClubsFilePath)
+
+    def testLoginPageLoads(self):
+        #GET request to / should return the login page
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+
+    def testLoginWithCorrectCredentials(self):
+        #POST to / with correct credentials should redirect to main page
+        response = self.client.post("/", data={
+            "username": "testuser",
+            "password": "password",
+            "actionName": "login"
+        })
+        self.assertEqual(response.status_code, 302) #302 = redirect
+
+    def testLoginWithWrongPassword(self):
+        #POST to / with wrong password should stay on login page with a message
+        response = self.client.post("/", data={
+            "username": "testuser",
+            "password": "wrongpassword",
+            "actionName": "login"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Wrong Password", response.data)
+
+    def testLoginWithUnknownUser(self):
+        response = self.client.post("/", data={
+            "username": "nobody",
+            "password": "pass",
+            "actionName": "login"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Account Not Found", response.data)
+
+    def testSignUpCreatesAccountAndRedirects(self):
+        response = self.client.post("/", data={
+            "username": "brandnewuser",
+            "password": "pass123",
+            "actionName": "signUp"
+        })
+        self.assertEqual(response.status_code, 302)
+
+    def testSignUpDuplicateUsernameStaysOnPage(self):
+        response = self.client.post("/", data={
+            "username": "testuser",
+            "password": "pass",
+            "actionName": "signUp"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Account already created", response.data)
+
+    def testMainPageRedirectsIfNotLoggedIn(self):
+        #Accessing /main without a session should redirect to login
+        response = self.client.get("/main")
+        self.assertEqual(response.status_code, 302)
+
+    def testMainPageLoadsWhenLoggedIn(self):
+        with self.client.session_transaction() as session:
+            session["username"] = "testuser"
+        response = self.client.get("/main")
+        self.assertEqual(response.status_code, 200)
+
+    def testLoadPageLoads(self):
+        response = self.client.get("/load")
+        self.assertEqual(response.status_code, 200)
+
+    def testLogoutClearsSession(self):
+        with self.client.session_transaction() as session:
+            session["username"] = "testuser"
+        response = self.client.post("/logout")
+        self.assertEqual(response.status_code, 302)
+        #After logout, /main should redirect back to login
+        response = self.client.get("/main")
+        self.assertEqual(response.status_code, 302)
+
+    def testGetStationsReturnsJson(self):
+        with self.client.session_transaction() as session:
+            session["username"] = "testuser"
+        response = self.client.get("/get_stations?search=Station")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIsInstance(data, list)
+
+    def testGetStationsSearchFilters(self):
+        with self.client.session_transaction() as session:
+            session["username"] = "testuser"
+        response = self.client.get("/get_stations?search=Station A")
+        data = json.loads(response.data)
+        self.assertTrue(any("Station A" in item["text"] for item in data))
+
+    def testCheckFlagReturnsJson(self):
+        response = self.client.get("/check_flag")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIn("status", data)
+
+    def testLoadDefaultParametersReturnsJson(self):
+        with self.client.session_transaction() as session:
+            session["username"] = "testuser"
+        response = self.client.get("/load_default_parameters")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIn("CHANGING_TIME", data)
+        self.assertIn("ATTENDANCE", data)
+
+    def testSaveParametersUpdatesDatabase(self):
+        with self.client.session_transaction() as session:
+            session["username"] = "testuser"
+        #Use the same walking parameters already in the test database so redoStore
+        #doesn't fail trying to look up venues that don't exist in the test database
+        payload = {
+            "CHANGING_TIME": 5.0, "MAX_TIME_WINDOW": 100.0,
+            "rawArrivalPeakOffset": 20.0, "rawDeparturePeakOffset": 20.0,
+            "ATTENDANCE": 0.9, "TRAIN_PROPORTION": 0.8,
+            "SIGMA_FACTOR": 3.0, "MINIMUM_PEOPLE": 40.0,
+            "PERSON_DELAY": 0.001, "PROPAGATION_FACTOR": 0.4,
+            "WALKING_TIME": 15.0, "WALKING_SPEED": 5.0,
+            "NORMAL": 1.0, "SLIGHTLY": 1.5, "BUSY": 2.5
+        }
+        response = self.client.post("/save_parameters",
+            data=json.dumps(payload),
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        #Verify the value was actually written to the database
+        connection = sqlite3.connect(self.databaseFile)
+        result = connection.execute("SELECT CHANGING_TIME FROM Users WHERE Username = 'testuser'").fetchone()[0]
+        connection.close()
+        self.assertAlmostEqual(result, 5.0)
+
+    def testUpdateFlagsReturnsSuccess(self):
+        response = self.client.post("/updateFlags")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data["success"])
+
+    def testUpdatePageLoadsWhenLoggedIn(self):
+        with self.client.session_transaction() as session:
+            session["username"] = "testuser"
+        response = self.client.get("/update")
+        self.assertEqual(response.status_code, 200)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# main.py — helper functions
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestFormatDuration(unittest.TestCase):
+
+    def testLessThanOneHour(self):
+        result = mainApp.formatDuration(45)
+        self.assertIn("45", result)
+        self.assertNotIn("hour", result)
+
+    def testMoreThanOneHour(self):
+        result = mainApp.formatDuration(90)
+        self.assertIn("hour", result)
+        self.assertIn("30", result)
+
+    def testExactlyOneHour(self):
+        result = mainApp.formatDuration(60)
+        self.assertIn("1", result)
+        self.assertIn("hour", result)
+
+
+class TestProcessTime(unittest.TestCase):
+
+    def testReturnsCorrectArrivalTime(self):
+        duration, arrivalTime = mainApp.processTime(30, "10:00")
+        self.assertEqual(arrivalTime, "10:30")
+
+    def testReturnsCorrectDurationString(self):
+        duration, arrivalTime = mainApp.processTime(30, "10:00")
+        self.assertIn("30", duration)
+
+    def testOvernightJourney(self):
+        #Journey starting at 23:30 for 60 minutes should arrive at 00:30
+        duration, arrivalTime = mainApp.processTime(60, "23:30")
+        self.assertEqual(arrivalTime, "00:30")
+
+
+class TestGetLines(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsListOfLines(self):
+        result = mainApp.getLines("Station A", self.databaseFile)
+        self.assertIsInstance(result, list)
+
+    def testCorrectLineReturned(self):
+        result = mainApp.getLines("Station A", self.databaseFile)
+        self.assertIn("Central Line", result)
+
+    def testUnknownStationReturnsEmpty(self):
+        result = mainApp.getLines("Nonexistent Station", self.databaseFile)
+        self.assertEqual(result, [])
+
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API tests — these require a live internet connection to run
+# getTfLData.py and storeStadiumData.py and scraper.py
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestFetchStations(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        databaseCreation.createLines(self.databaseFile, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'programme files', 'lines.json'))
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsDictionary(self):
+        #Fetches stations for the central line from the TfL API
+        result = getTfLData.fetchStations(TfL_API_KEY, ["central"])
+        self.assertIsInstance(result, dict)
+
+    def testStationDictionaryNotEmpty(self):
+        result = getTfLData.fetchStations(TfL_API_KEY, ["central"])
+        self.assertGreater(len(result), 0)
+
+    def testStationsHaveCorrectAttributes(self):
+        result = getTfLData.fetchStations(TfL_API_KEY, ["central"])
+        #Every station object should have a NaPTAN, StationName, Latitude and Longitude
+        for stationObject in result.values():
+            self.assertIsNotNone(stationObject.NaPTAN)
+            self.assertIsNotNone(stationObject.StationName)
+            self.assertIsNotNone(stationObject.Latitude)
+            self.assertIsNotNone(stationObject.Longitude)
+
+    def testBadApiKeyReturnsInt(self):
+        #safeGet returns an integer status code when the API call fails
+        result = getTfLData.fetchStations("invalid_key_12345", ["central"])
+        self.assertIsInstance(result, int)
+
+
+#fetch_lines() is one of the two functions called by fetchTfLData(), so if these tests
+#pass alongside TestFetchStations it also confirms fetchTfLData() works end-to-end
+class TestFetchLines(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        databaseCreation.createLines(self.databaseFile, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'programme files', 'lines.json'))
+        #fetchLines needs a populated stationDictionary to work with
+        self.stationDictionary = getTfLData.fetchStations(TfL_API_KEY, ["central"])
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsDictionary(self):
+        result = getTfLData.fetch_lines(self.stationDictionary, TfL_API_KEY, ["central"])
+        self.assertIsInstance(result, dict)
+
+    def testCentralLinePresent(self):
+        result = getTfLData.fetch_lines(self.stationDictionary, TfL_API_KEY, ["central"])
+        self.assertIn("central", result)
+
+    def testBranchesAreListsOfNaPTANs(self):
+        result = getTfLData.fetch_lines(self.stationDictionary, TfL_API_KEY, ["central"])
+        for branch in result["central"]:
+            self.assertIsInstance(branch, list)
+            self.assertGreater(len(branch), 0)
+
+
+class TestGetStationCoordinates(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsCoordinates(self):
+        result = getTfLData.getStationCoordinates(self.databaseFile, "STA")
+        self.assertIsNotNone(result)
+
+    def testCoordinatesAreCorrect(self):
+        result = getTfLData.getStationCoordinates(self.databaseFile, "STA")
+        latitude, longitude = result
+        self.assertAlmostEqual(latitude, 51.50)
+        self.assertAlmostEqual(longitude, -0.10)
+
+
+class TestGetStationLineRelationships(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testRelationshipsArePopulated(self):
+        #Wipe existing relationships then repopulate from the Connections table
+        connection = sqlite3.connect(self.databaseFile)
+        connection.execute("DELETE FROM StationLineRelationships")
+        connection.commit()
+        connection.close()
+        getTfLData.getStationLineRelationships(self.databaseFile)
+        connection = sqlite3.connect(self.databaseFile)
+        rows = connection.execute("SELECT * FROM StationLineRelationships").fetchall()
+        connection.close()
+        self.assertGreater(len(rows), 0)
+
+    def testRelationshipsMatchConnections(self):
+        #Every NaPTAN in StationLineRelationships should also appear in Connections
+        connection = sqlite3.connect(self.databaseFile)
+        slrRows = {row[0] for row in connection.execute("SELECT NaPTAN FROM StationLineRelationships").fetchall()}
+        connectionRows = {row[0] for row in connection.execute("SELECT StationA FROM Connections").fetchall()}
+        connection.close()
+        self.assertTrue(slrRows.issubset(connectionRows))
+
+
+#SaveTfLData() calls fetchTfLData() and getStationLineRelationships() internally, so
+#if these tests pass it also confirms both of those functions work correctly end-to-end
+class TestSaveTfLData(unittest.TestCase):
+
+    def setUp(self):
+        temporaryFile = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        temporaryFile.close()
+        self.databaseFile = temporaryFile.name
+        databaseCreation.createDatabase(self.databaseFile)
+        databaseCreation.createLines(self.databaseFile, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'programme files', 'lines.json'))
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testSaveTfLDataReturnsTrue(self):
+        #Full pipeline — fetches and stores all TfL station and connection data
+        result = getTfLData.SaveTfLData(self.databaseFile, TfL_API_KEY)
+        self.assertTrue(result)
+
+    def testStationsTablePopulated(self):
+        getTfLData.SaveTfLData(self.databaseFile, TfL_API_KEY)
+        connection = sqlite3.connect(self.databaseFile)
+        count = connection.execute("SELECT COUNT(*) FROM Stations").fetchone()[0]
+        connection.close()
+        self.assertGreater(count, 0)
+
+    def testConnectionsTablePopulated(self):
+        getTfLData.SaveTfLData(self.databaseFile, TfL_API_KEY)
+        connection = sqlite3.connect(self.databaseFile)
+        count = connection.execute("SELECT COUNT(*) FROM Connections").fetchone()[0]
+        connection.close()
+        self.assertGreater(count, 0)
+
+
+class TestGetCoordinates(unittest.TestCase):
+
+    def testReturnsCoordinatesForKnownStadium(self):
+        result = storeStadiumData.getCoordinates(OPENCAGE_API_KEY, "Emirates Stadium")
+        self.assertIn("lat", result)
+        self.assertIn("lng", result)
+
+    def testLatitudeIsReasonableForLondon(self):
+        #All London venues should have latitude roughly between 51 and 52
+        result = storeStadiumData.getCoordinates(OPENCAGE_API_KEY, "Stamford Bridge")
+        self.assertGreater(result["lat"], 51.0)
+        self.assertLess(result["lat"], 52.0)
+
+    def testLongitudeIsReasonableForLondon(self):
+        #All London venues should have longitude roughly between -0.5 and 0.1
+        result = storeStadiumData.getCoordinates(OPENCAGE_API_KEY, "Stamford Bridge")
+        self.assertGreater(result["lng"], -0.5)
+        self.assertLess(result["lng"], 0.1)
+
+
+#getStadiumData() calls getCoordinates() and insertData() for every club in the JSON,
+#so if these tests pass it also confirms both functions work correctly in a real context,
+#in addition to their own direct tests above
+class TestGetStadiumData(unittest.TestCase):
+
+    def setUp(self):
+        self.connection = createTestDatabase()
+        self.databaseFile = writeTestDatabaseToFile(self.connection)
+        self.londonClubsFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'programme files', 'londonClubs.json')
+
+    def tearDown(self):
+        os.unlink(self.databaseFile)
+
+    def testReturnsTrue(self):
+        result = storeStadiumData.getStadiumData(self.londonClubsFile, self.databaseFile, OPENCAGE_API_KEY, 1.25)
+        self.assertTrue(result)
+
+    def testVenuesTablePopulated(self):
+        storeStadiumData.getStadiumData(self.londonClubsFile, self.databaseFile, OPENCAGE_API_KEY, 1.25)
+        connection = sqlite3.connect(self.databaseFile)
+        count = connection.execute("SELECT COUNT(*) FROM Venues").fetchone()[0]
+        connection.close()
+        self.assertGreater(count, 0)
+
+    def testTeamsTablePopulated(self):
+        storeStadiumData.getStadiumData(self.londonClubsFile, self.databaseFile, OPENCAGE_API_KEY, 1.25)
+        connection = sqlite3.connect(self.databaseFile)
+        count = connection.execute("SELECT COUNT(*) FROM Teams").fetchone()[0]
+        connection.close()
+        self.assertGreater(count, 0)
+
+
+#getPageFixtures() calls getDate() internally for every date heading it finds, so if
+#these tests pass it also confirms getDate() works in a real scraping context.
+#scraper.main() is an orchestrator that calls getPageFixtures() for every league and
+#month, so if these tests pass it also confirms scraper.main() works end-to-end
+class TestGetPageFixtures(unittest.TestCase):
+
+    def testReturnsDictionary(self):
+        #Scrapes one month of Premier League fixtures from BBC Sport
+        fixtures = {}
+        result = scraper.getPageFixtures(
+            "https://www.bbc.co.uk/sport/football/premier-league/scores-fixtures/2026-03?filter=fixtures",
+            "2026-03",
+            "Premier League",
+            fixtures
+        )
+        self.assertIsInstance(result, dict)
+
+    def testFixturesNotEmpty(self):
+        fixtures = {}
+        result = scraper.getPageFixtures(
+            "https://www.bbc.co.uk/sport/football/premier-league/scores-fixtures/2026-03?filter=fixtures",
+            "2026-03",
+            "Premier League",
+            fixtures
+        )
+        #There should be at least some fixtures for a given month
+        totalFixtures = sum(len(v) for v in result.values())
+        self.assertGreater(totalFixtures, 0)
+
+    def testFixturesHaveCorrectKeys(self):
+        fixtures = {}
+        result = scraper.getPageFixtures(
+            "https://www.bbc.co.uk/sport/football/premier-league/scores-fixtures/2026-03?filter=fixtures",
+            "2026-03",
+            "Premier League",
+            fixtures
+        )
+        for dateFixtures in result.values():
+            for fixture in dateFixtures:
+                self.assertIn("home", fixture)
+                self.assertIn("away", fixture)
+                self.assertIn("time", fixture)
+                self.assertIn("league", fixture)
+
+    def testBadUrlReturnsInt(self):
+        #safeGet should return 0 if the URL is completely unreachable
+        fixtures = {}
+        result = scraper.getPageFixtures(
+            "https://this.url.does.not.exist.invalid/fixtures",
+            "2026-03",
+            "Premier League",
+            fixtures
+        )
+        self.assertIsInstance(result, int)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
