@@ -57,8 +57,8 @@ class Parameters():
     # Converts raw peak offsets to datetime.timedelta objects for internal use
     def calculatePeakOffset(self):
         import datetime
-        self.arrivalPeakOffset = datetime.timedelta(self.rawArrivalPeakOffset)
-        self.departurePeakOffset = datetime.timedelta(self.rawDeparturePeakOffset)
+        self.arrivalPeakOffset = datetime.timedelta(minutes=self.rawArrivalPeakOffset)
+        self.departurePeakOffset = datetime.timedelta(minutes=self.rawDeparturePeakOffset)
 
 
     # Converts the peak offsets to numeric minutes for simpler calculations
