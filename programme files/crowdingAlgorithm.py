@@ -6,7 +6,7 @@ import classes
 import customFunctions
 
 
-#Kinda useless but kept it because annoying to remove now
+#Packages journey input data into a dictionary for use by downstream functions
 def takeInput(date, journeyStart, startStation, endStation):
     data = {
         "date": date,
@@ -172,7 +172,8 @@ def findBaseNumberOfPeople(
     sigmaArrival = max(1, arrivalWindowMinutes / SIGMA_FACTOR) #max used to make sure sigma is at least bigger or equal to 1
     sigmaDeparture = max(1, departureWindowMinutes / SIGMA_FACTOR)
 
-    #Realistically there isn't going to be a difference between arrival and departure rates because if you came by train, you will probably leave by train so will not affect, and vice versa, so the factors will be set to one
+    # Calculates how much of the peak crowd is present at the journey midpoint for both arrival and departure peaks
+    # The larger of the two is then used per station, as the journey is most likely to coincide with one peak at a time
 
     arrivalsFactorAtMid = gausianFactorAtPeak(relativeArrivalPeakTime, sigmaArrival, 0)
     depratureFactorAtMid = gausianFactorAtPeak(relativeDepartPeakTime, sigmaDeparture, 0)
@@ -386,7 +387,7 @@ def getCrowdingFactor(username, databaseFile, date, journeyStart, startStation, 
     #The network object has attributes edges and stations
     #Stations contain a type of dijkstraStation objects which store delays
     #Edges are connections which also store delays
-    #Network doesn't have to be returned in the above functions since the reference isn't changed
+    #Station objects within network.nodes are replaced with new affected objects, and their attributes are updated in place, so the changes persist without needing to return the network
 
     return network
 

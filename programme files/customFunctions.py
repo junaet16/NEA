@@ -21,7 +21,7 @@ def safeGet(url, params=None):
 
             # Handle server-side errors
             if response.status_code >= 500 and response.status_code < 600:
-                print(f"Server error: Attempt {attempt + 1} of 2")
+                print(f"Server error: Attempt {attempt + 1} of {attempts}")
                 time.sleep(waitTime)
                 continue
 
@@ -106,7 +106,7 @@ def getParameters(username, databaseFile):
         BUSY
     )
 
-    # Compute values using the data for me just stored in the object, to be used later in the programme
+    # Compute values using the data just stored in the object, to be used later in the programme
     parameterObject.calculateWindow()
     parameterObject.calculatePeakOffset()
     parameterObject.calculateMinutesOffset()

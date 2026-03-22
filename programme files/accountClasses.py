@@ -47,14 +47,14 @@ class Parameters():
         self.departureMinutesOffset = None
 
 
-    # When I was initially writing the program, window minutes for both arrival and departure were entered differently, so the program is written with the assumpton that they can be different, when in reality they are the same, so here both the arrival and departure window minutes are set to the same max time window that is passed in
+    # Sets the arrival and departure window minutes to MAX_TIME_WINDOW
+    # Both windows use the same value - the programme is written to allow them to differ in future if needed
     def calculateWindow(self):
-        # The timedelta is useful if I want to add/subtract offsets from event start/end
         self.arrivalWindowMinutes = self.MAX_TIME_WINDOW
         self.departureWindowMinutes = self.MAX_TIME_WINDOW
 
 
-    # Converts raw peak offsets to datetime.timedelta objects for internal use
+    #Converts raw peak offsets stored in minutes to timedelta objects for use in datetime arithmetic
     def calculatePeakOffset(self):
         import datetime
         self.arrivalPeakOffset = datetime.timedelta(minutes=self.rawArrivalPeakOffset)

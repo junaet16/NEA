@@ -69,7 +69,7 @@ class Station(TransportClass):
 
 
     def IsAffected(self):
-        pass
+        pass #IsAffected() is intentionally deferred to concrete subclasses - AffectedDijkstraStation returns True, NotAffectedDijkstraStation returns False
 
 
 
@@ -94,7 +94,7 @@ class DijkstraStation(Station):
 
 
     def IsAffected(self):
-        pass
+        pass #IsAffected() is intentionally deferred to concrete subclasses - AffectedDijkstraStation returns True, NotAffectedDijkstraStation returns False
 
 
 
@@ -199,4 +199,4 @@ class Network():
     def __init__(self):
         self.nodes = {} #Dictionary of station objects with the key being the NaPTAN
         self.edges = {} #Dictionary of connection objects with the key being (StationA, StationB, LineID)
-        self.SpreadOutEdges = {} # Used to store edges after delay propagation
+        self.SpreadOutEdges = {} #Used in an earlier version of the delay spreading algorithm - retained in case it is needed again in the future

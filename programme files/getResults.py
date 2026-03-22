@@ -63,6 +63,7 @@ def getStrippedGraph(oldPath, affectedGraph):
             connectedLineID = connectedStation[2]
 
             # Only keep the edge if it matches the original path connection
+            # Just adjusting the time of individual connections of the base path, doesn't change the time taken to change trains, which is a flaw fixed with this implementation
             if connectedStationB == StationB and connectedLineID == LineID:
                 strippedGraph[StationA] = [connectedStation]
 

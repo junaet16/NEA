@@ -40,7 +40,7 @@ def getCloseStations(allStations, venueCoordinates, walkingDistance):
     return CloseStationDictionary
 
 
-# Inserts stadium, team, and venue-station relationship data for me into the database
+# Inserts stadium, team, and venue-station relationship data into the database
 def insertData(databaseFile, club, stadiumName, capacity, coordinates, walkingDistance):
     connection = sqlite3.connect(databaseFile)
     cursor = connection.cursor()
@@ -93,7 +93,7 @@ def insertData(databaseFile, club, stadiumName, capacity, coordinates, walkingDi
     connection.close()
 
 
-#Uses JSON file of club data for me
+#Uses JSON file of club data
 #{"ClubName" : [StadiumName, Capacity]}
 def getStadiumData(londonClubsFile, databaseFile, key, walkingDistance):
     with open(londonClubsFile, "r") as file:
