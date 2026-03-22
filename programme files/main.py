@@ -212,6 +212,10 @@ def updatePage():
     Displays and allows updating of user-specific parameters.
     """
 
+    # Redirect to login if not logged in
+    if "username" not in session:
+        return redirect(url_for("loginPage"))
+
     databaseFile = app.config["DATABASE_FILE"]
     username = session["username"]
 
