@@ -4,6 +4,12 @@ import json
 from geopy.distance import geodesic
 
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
 #Use of the API to get coordinates
 def getCoordinates(key, location):
     geocoder = OpenCageGeocode(key)
@@ -167,7 +173,7 @@ def redoStore(walkingTime, walkingSpeed, londonClubsFile, databaseFile):
 
 
 if __name__ == '__main__':
-    key = "eb0e2c9b71cc45f7aafe0ae4ecc44cc2"
+    OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY")
     londonClubsFile = "londonClubs.json"
     databaseFile = "final.db"
     main(key, londonClubsFile, databaseFile, 15, 5)

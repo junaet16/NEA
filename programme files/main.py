@@ -12,6 +12,12 @@ import storeStadiumData
 import customFunctions
 
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
 # Flask app initialisation
 app = Flask(__name__)
 app.secret_key = "VERY_SECRET_KEY" # Needed for session management
@@ -655,8 +661,8 @@ def get_stations():
 if __name__ == '__main__':
     databaseFile = "data/theDatabase.db"
     LinesjsonFile = "lines.json"
-    TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
-    OPENCAGE_API_KEY = "eb0e2c9b71cc45f7aafe0ae4ecc44cc2"
+    TfL_API_KEY = os.getenv("TFL_API_KEY")
+    OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY")
     londonjsonFile = "londonClubs.json"
     leaguesjsonFile = "leagues.json"
     flagFile = "data/flags.json"

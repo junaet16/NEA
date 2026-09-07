@@ -4,6 +4,12 @@ from customFunctions import safeGet
 from geopy.distance import geodesic
 
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
 #GLOBAL PARAMETERS
 #How long a train waits at a station
 WAITING_TIME = 0.5
@@ -235,6 +241,6 @@ def main(TFL_API_KEY, databaseFile):
 
 
 if __name__ == "__main__":
-    TfL_API_KEY = "0ff5a2076cd640cb957e63d6947efc61"
+    TfL_API_KEY = os.getenv("TFL_API_KEY")
     main(TfL_API_KEY, "final.db")
     pass
